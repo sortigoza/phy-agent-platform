@@ -53,7 +53,7 @@ class LocalTracer:
 
     def record(self, run: Run, request: dict, response: Response | None, error: str | None) -> None:
         ended_at = _now()
-        path = self.paths.runs / f"{run.id}.jsonl"
+        path = self.paths.run_log(run.id)
         path.parent.mkdir(parents=True, exist_ok=True)
         line = {
             "run_id": run.id,

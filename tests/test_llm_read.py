@@ -53,7 +53,7 @@ def runs(ctx):
 
 
 def trace(ctx):
-    return [json.loads(line) for line in (ctx.paths.runs / f"{ctx.run_id}.jsonl").open()]
+    return [json.loads(line) for line in ctx.paths.run_log(ctx.run_id).open()]
 
 
 def test_the_read_request_is_laid_out_for_caching(ctx, run):
