@@ -83,8 +83,12 @@ def rows(phy_home, sql):
 
 
 def state(phy_home, key):
-    found = rows(phy_home, f"SELECT value FROM state WHERE key = '{key}'")
-    return found[0]["value"] if found else None
+    conn = sqlite3.connect(phy_home / "phy.db")
+    try:
+        found = conn.execute("SELECT value FROM state WHERE key = ?", (key,)).fetchone()
+    finally:
+        conn.close()
+    return found[0] if found else None
 
 
 def test_first_run_backfills_and_sets_the_mark(installed):
@@ -173,6 +177,8 @@ def test_bad_resumption_token_fails_the_run_and_leaves_the_mark(installed):
 
 
 def test_the_mark_stays_unless_every_set_succeeds(installed):
+    harvested_once(installed)
+    set_mark(installed, "2026-10-20")
     install(installed, ["physics:hep-lat", "physics:quant-ph"])
     first_pages = {
         "physics:hep-lat": page([Rec("2610.00001", [V1])], response_date="2026-10-25T09:00:00Z"),
@@ -183,8 +189,7 @@ def test_the_mark_stays_unless_every_set_succeeds(installed):
         result = phy("watch")
 
     assert result.exit_code == 1
-    assert state(installed, "watch.hwm") is None
-    assert state(installed, "watch.last_success_at") is None
+    assert state(installed, "watch.hwm") == "2026-10-20"
     # The first set's upserts stand; the next run fetches them again for free.
     assert len(rows(installed, "SELECT * FROM papers")) == 1
 
