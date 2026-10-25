@@ -38,8 +38,8 @@ v1 succeeds when the Reader absorbs 30 relevant papers a week with no more than 
 ### Assumptions
 
 - **User:** a single Reader. No authentication; everything binds to `localhost`.
-- **Machine:** an Apple Silicon Mac with ≥ 16 GB RAM. Python 3.11+ managed by `uv`.
-- **Model access:** the Anthropic Python SDK, with credentials from `ANTHROPIC_API_KEY` or `ant auth login`.
+- **Machine:** an Apple Silicon Mac with ≥ 16 GB RAM. Python 3.13 managed by `uv`.
+- **Model access:** the Anthropic Python SDK, which finds credentials itself: `ANTHROPIC_API_KEY` if set, otherwise the `ant auth login` profile in `~/.config/anthropic/` (the documented default, because it works under launchd). phy has no credential code.
 - **Source:** arXiv is the only source, harvested with OAI-PMH. LaTeX source is preferred and PDF is the fallback.
 
 ### Milestones
@@ -99,7 +99,7 @@ A Paper that appears in several sets gets the most permissive pre-filter of thos
 ```
                launchd (06:00 daily + at login)
                          │
-                   phy daily  ──────────────► data/runs/<run_id>.jsonl (full request/response)
+                   phy daily  ──────────────► $PHY_HOME/runs/<run_id>.jsonl (full request/response)
                          │                         ▲
    ┌───────────┬─────────┴──┬─────────────┐        │ Tracer
    ▼           ▼            ▼             ▼        │
@@ -108,7 +108,7 @@ A Paper that appears in several sets gets the most permissive pre-filter of thos
   no LLM)     + Haiku)      flatten,     quotes, invented
                             Sonnet)      numbers)
    │           │            │             │
-   └───────────┴────► data/phy.db (SQLite, WAL) ◄──── phy ui (FastAPI + HTMX, localhost)
+   └───────────┴────► $PHY_HOME/phy.db (SQLite, WAL) ◄ phy ui (FastAPI + HTMX, localhost)
                               ▲                        ├─ /review     one Card at a time
                               │                        ├─ /monitor    Instrument tiles + funnel
                          phy eval ◄── golden/          └─ /runs/<id>  run viewer
@@ -116,16 +116,18 @@ A Paper that appears in several sets gets the most permissive pre-filter of thos
 
 ### Components
 
-**Runtime.** A single Python package, `phy`, run with `uv run phy <command>`. There are no long-running services except the UI, which runs only while the Reader uses it.
+**Runtime.** A single Python package, `phy`, run with `uv run phy <command>` from the repo. There are no long-running services except the UI, which runs only while the Reader uses it. Typer CLI; `cli.py` only parses arguments and calls plain Stage functions `run(ctx, …)`, where `ctx` carries config, db connection, Tracer and run_id.
+
+**Installation home.** All instance state lives in `$PHY_HOME` (default `~/.phy-agent-platform`, overridden by the `PHY_HOME` env var), not in the repo, so the clone location doesn't matter. `config.py` resolves it once into a `Paths` object; no other module has path literals. See §6.
 
 **Scheduling.** A launchd agent runs `phy daily`, which executes Watch → Filter → Read → Verify in order.
-- It is set up with `StartCalendarInterval` at 06:00 plus `RunAtLoad`.
+- `phy schedule install` writes the plist with `StartCalendarInterval` at 06:00 plus `RunAtLoad`, the absolute path to `uv` (launchd's PATH is bare and it never reads shell profiles), `WorkingDirectory` set to the repo, `PHY_HOME` in `EnvironmentVariables` (never a secret), and `StandardErrorPath` at `$PHY_HOME/logs/launchd.err` for crashes before logging starts.
 - If the Mac was asleep at 06:00, the run starts on wake. Several missed slots collapse into one run.
 - If the Mac was shut down, the run happens at login.
 - A second run on the same day is harmless.
-- A lock file (`data/phy.lock`) prevents two `daily` runs from overlapping.
+- A lock file (`$PHY_HOME/phy.lock`, `fcntl.flock`, released on process death so it never goes stale) is taken non-blocking by `daily` and by every Stage command, including `read --paper`. If it is held, the command logs and exits 0. `ui` and `status` never take it.
 
-**Storage.** One SQLite file, `data/phy.db`, in WAL mode with `busy_timeout`. The pipeline is the only bulk writer. The UI writes only short Review and Flag rows. Plain files hold everything humans author or diff (§6).
+**Storage.** One SQLite file, `$PHY_HOME/phy.db`, in WAL mode with `busy_timeout`, accessed with raw `sqlite3` (no ORM) through named functions in `db.py`. Migrations are numbered `src/phy/migrations/NNN_<name>.sql` files tracked with `PRAGMA user_version` and applied automatically on connect; there are no down-migrations. The pipeline is the only bulk writer. The UI writes only short Review and Flag rows. Plain files hold everything humans author or diff (§6).
 
 **Model calls.** All model calls go through one module (`phy.llm`). It is responsible for:
 - building the request (prompt version, model, effort, cache breakpoints, `output_config.format` from the Pydantic schema);
@@ -136,28 +138,42 @@ A Paper that appears in several sets gets the most permissive pre-filter of thos
 
 **Tracer.** An interface with one method, `record(run, request, response, error)`. The v1 implementation writes a JSONL file per run and a summary row in `runs`. A Langfuse implementation can be added in M2 without touching any Stage.
 
-**arXiv access.** All arXiv traffic (OAI-PMH and `/src/`) goes through one rate limiter. It allows one request at a time, at least 3 s apart, coordinated across processes by a lock file holding the last request time. Retries use exponential backoff on 429, 503 and network errors, up to 3 attempts. After that the Stage run fails.
+**Logging.** structlog, with stdlib logging routed through it. Human-readable console lines go to stderr, and the same events go as JSON lines to `$PHY_HOME/logs/phy-YYYY-MM-DD.jsonl` (30 days kept).
+- Event names are fixed `<area>.<past_tense>` strings (`read.card_written`, `arxiv.retry`). Variables go in keys; `run_id`, `stage`, `arxiv_id` and `version` are bound through contextvars.
+- ERROR: a Stage run or paper failed and someone must look. WARNING: degraded but continuing. INFO: Stage start and finish with counts, one line per paper outcome; a normal `phy daily` stays under about 30 INFO lines. DEBUG: per request, only with `-v`.
+- `httpx`, `httpcore`, `anthropic` and `urllib3` are capped at WARNING. Secrets, prompt and response bodies (the Tracer has those), abstracts and quote text are never logged. An exception is logged once, where it is handled.
+- SQLite is the source of every pipeline metric, every Instrument tile and the budget guardrail. Logs carry only operational metrics (durations, retries, rate-limiter waits, lock contention), with the unit in the key (`duration_ms`, `wait_s`).
+
+**arXiv access.** All arXiv traffic (OAI-PMH and `/src/`) goes through one rate limiter. It allows one request at a time, at least 3 s apart, coordinated across processes by a lock file (`$PHY_HOME/arxiv.lock`, blocking `flock`) holding the last request time. The request and any backoff sleeps happen while the lock is held. Retries use exponential backoff on 429, 503 and network errors, up to 3 attempts. After that the Stage run fails.
 
 ## 6. Files and data
 
 ```
-phy-agent-platform/
+phy-agent-platform/             # the repo: code only
 ├── GLOSSARY.md  QUICK_START.md
 ├── docs/SPEC.md  docs/adr/
+├── prompts/<stage>/<version>.md  # immutable once used; config selects the active version
+├── schemas/                    # exported Card JSON Schemas
+├── src/phy/                    # cli, config, db, arxiv, watch, filter, read/, verify, eval,
+│                               # card, llm, tracer, locks, ui/, migrations/, defaults/
+└── tests/                      # pytest; fixtures/ replayed with respx, -m live for the paid smoke test
+
+$PHY_HOME/                      # ~/.phy-agent-platform by default; a local git repo, no remote
 ├── config.toml                 # all knobs (QUICK_START lists them)
 ├── questions.yaml              # research questions, keywords, negative keywords
-├── prompts/<stage>/<version>.md  # immutable once used; config selects the active version
 ├── golden/
 │   ├── manifest.yaml           # golden set version, papers, split, status, provenance
 │   └── <arxiv_id>/reference.json
-├── ops/launchd/phy.daily.plist
-├── src/phy/                    # watch, filter, read, verify, eval, llm, tracer, db, ui
-└── data/                       # gitignored, local only (arXiv ToU)
-    ├── phy.db
-    ├── papers/<arxiv_id>v<n>/  # raw download + flattened.txt
-    ├── golden_sources/<arxiv_id>v<n>/  # frozen, never re-fetched
-    └── runs/<run_id>.jsonl
+├── CHANGELOG.md                # accepted changes (Meta-work)
+├── .gitignore                  # ignores everything below this line (arXiv ToU)
+├── phy.db  phy.lock  arxiv.lock
+├── papers/<arxiv_id>v<n>/      # raw download + flattened.txt
+├── golden_sources/<arxiv_id>v<n>/  # frozen, never re-fetched
+├── runs/<run_id>.jsonl
+└── logs/
 ```
+
+`phy init` creates `$PHY_HOME`, seeds `config.toml` (the QUICK_START defaults), `questions.yaml` (the 4 questions of §4), an empty `golden/manifest.yaml` and `CHANGELOG.md` from `src/phy/defaults/`, never overwriting a file, and runs `git init` there. phy never commits: the Reader commits config, Golden and changelog changes as part of Meta-work. Config is read with `tomllib` and PyYAML into Pydantic models with `extra="forbid"`, once per command; invalid config fails the command before any work. `phy init` also makes one cheap API call to check auth and reports which credential source the SDK used.
 
 The Card schema lives in `src/phy/card.py` as two Pydantic models. `CardDraft` is what the model writes: it is the single source for the API's `output_config.format` and for validating the response. `Card` is what is stored: `CardDraft` plus the fields Verify adds (Support, `loc`, `match_count`). The UI renders `Card`. Both JSON Schemas are exported to `schemas/` so diffs are visible.
 
@@ -379,7 +395,7 @@ The Golden set is the unit test suite for reading. It follows standard dataset p
 - its status (Placeholder or Trusted);
 - who corrected it and when.
 
-**Frozen inputs.** Sources live in `data/golden_sources/` and are never re-fetched. If the sha256 doesn't match, the eval fails before any model call.
+**Frozen inputs.** Sources live in `$PHY_HOME/golden_sources/` and are never re-fetched. If the sha256 doesn't match, the eval fails before any model call.
 
 **Placeholders.** In M0, up to 4 Placeholder Reference cards are drafted by the pipeline itself (`phy golden add`). They become Trusted once the Reader has corrected them field by field. For the seed Papers, the Reader writes their own card first and then compares, to avoid anchoring on the draft.
 

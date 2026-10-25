@@ -7,15 +7,18 @@ Terms such as Card, Flag, Candidate and Golden set are defined in [`GLOSSARY.md`
 ## 1. One-time setup
 
 ```sh
-# Prerequisites: macOS, uv (https://docs.astral.sh/uv/), Python 3.11+
+# Prerequisites: macOS, uv (https://docs.astral.sh/uv/), Python 3.13
 uv sync                                  # install dependencies from uv.lock
 
-# Credentials: either one works
-ant auth login                           # or:
-export ANTHROPIC_API_KEY=sk-ant-...      # e.g. in ~/.zshenv, so launchd jobs see it
+# Credentials: the SDK finds them itself
+ant auth login                           # writes ~/.config/anthropic/, which launchd jobs can read
+# (an exported ANTHROPIC_API_KEY also works interactively, but launchd never sees shell profiles)
 
-uv run phy init                          # creates data/, data/phy.db, checks config + questions
+uv run phy init                          # creates ~/.phy-agent-platform/ (seeded config, questions,
+                                         # golden/, CHANGELOG.md; git init), the db, and checks auth
 ```
+
+Everything the installation owns lives in `$PHY_HOME`, `~/.phy-agent-platform` by default (set `PHY_HOME` to move it). The repo holds only code and prompts. `$PHY_HOME` is a local git repo: commit your config, questions, Golden and changelog edits there; phy never commits for you. Paths below such as `config.toml` and `golden/` are relative to `$PHY_HOME`.
 
 Before the first run, set a **monthly spend cap** in the Anthropic Console. That cap is the hard ceiling. The pipeline's own `budget.weekly_usd` is the soft one.
 
@@ -68,7 +71,7 @@ The job runs at 06:00 and at login.
 - **Shut down:** it runs at the next login.
 - **Missed days:** the high-water mark catches them up, so nothing is lost.
 
-Logs go to `data/logs/daily.log`.
+Logs go to `$PHY_HOME/logs/phy-YYYY-MM-DD.jsonl` (stderr shows the same events in readable form). Crashes before logging starts land in `$PHY_HOME/logs/launchd.err`.
 
 ## 6. Your weekly routine
 
@@ -167,10 +170,10 @@ To promote a Placeholder to Trusted:
 
 | Symptom | First thing to check |
 | --- | --- |
-| "Days since mark advanced" is red | `phy schedule status`, `data/logs/daily.log`, then the last Watch run in `/runs` |
+| "Days since mark advanced" is red | `phy schedule status`, `$PHY_HOME/logs/`, then the last Watch run in `/runs` |
 | Zero papers harvested on a weekday | arXiv holiday? Otherwise the Watch run log (OAI-PMH errors) |
 | A Card says unsupported but the quote looks right | Run viewer: compare the quote with `flattened.txt`; probably a normalisation knob |
 | Invented-number badge | The run viewer. This is never acceptable, so Flag it and add the Paper to the Golden set |
-| Garbled Card from an odd submission | `data/papers/<id>v<n>/flattened.txt`. A flattener bug: add the Paper as an `awkward_source` Golden Paper |
+| Garbled Card from an odd submission | `$PHY_HOME/papers/<id>v<n>/flattened.txt`. A flattener bug: add the Paper as an `awkward_source` Golden Paper |
 | Need to re-harvest a window | `uv run phy watch --since 2026-10-01` (idempotent) |
 | Need to redo one Stage | `uv run phy <stage> [--paper ID] [--force]`. Every Stage is rerunnable alone |
