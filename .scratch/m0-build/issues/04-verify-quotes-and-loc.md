@@ -1,7 +1,7 @@
 # Verify: quotes and locations
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 03
 
 ## Goal
