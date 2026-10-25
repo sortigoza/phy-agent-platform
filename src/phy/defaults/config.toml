@@ -40,7 +40,7 @@ always_threshold = 0.9
 weekly_ceiling = 50
 model = "claude-sonnet-5-5"
 effort = "medium"
-prompt_version = "v1"
+prompt_version = "v2"
 recard_stale = "relevant_only"   # relevant_only, all or never
 
 [verify]

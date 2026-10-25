@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 from phy.cli import app
 from phy.config import resolve_paths
 from phy.ctx import Ctx
+from phy.tracer import LocalTracer
 
 REPO = Path(__file__).parent.parent
 MESSAGES_URL = "https://api.anthropic.com/v1/messages"
@@ -146,7 +147,7 @@ def test_ctx_carries_config_questions_db_and_a_run_id(phy_home, api):
     assert ctx.questions.questions[0].id == "Q1"
     assert ctx.db.execute("SELECT count(*) FROM runs").fetchone()[0] == 0
     assert ctx.run_id
-    assert ctx.tracer is None
+    assert isinstance(ctx.tracer, LocalTracer)
     assert Ctx.load(resolve_paths()).run_id != ctx.run_id
 
 

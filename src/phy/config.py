@@ -24,6 +24,11 @@ from pydantic import (
 
 DEFAULT_HOME = "~/.phy-agent-platform"
 
+# Versioned with the code, so read from the checkout (the dev clone, or the Release worktree).
+REPO = Path(__file__).resolve().parents[2]
+PROMPTS = REPO / "prompts"
+SCHEMAS = REPO / "schemas"
+
 
 @dataclass(frozen=True)
 class Paths:

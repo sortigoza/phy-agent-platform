@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 
 from phy import db
 from phy.config import Config, Paths, Questions, load_config, load_questions
+from phy.tracer import LocalTracer, Tracer
 
 
 @dataclass
@@ -16,19 +17,21 @@ class Ctx:
     questions: Questions
     db: sqlite3.Connection
     run_id: str
-    tracer: object | None = None  # the Tracer arrives with the Read call slice
+    tracer: Tracer
 
     @classmethod
     def load(cls, paths: Paths) -> "Ctx":
         """Validate config and questions first, so invalid config fails before any work."""
         config = load_config(paths)
         questions = load_questions(paths)
+        conn = db.connect(paths.db)
         return cls(
             paths=paths,
             config=config,
             questions=questions,
-            db=db.connect(paths.db),
+            db=conn,
             run_id=new_run_id(),
+            tracer=LocalTracer(paths, conn),
         )
 
 

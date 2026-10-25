@@ -1,0 +1,310 @@
+{
+  "$defs": {
+    "DeepRead": {
+      "type": "object",
+      "title": "DeepRead",
+      "properties": {
+        "recommend": {
+          "type": "boolean",
+          "title": "Recommend"
+        },
+        "why": {
+          "type": "string",
+          "title": "Why"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "recommend",
+        "why"
+      ]
+    },
+    "Fact": {
+      "type": "object",
+      "title": "Fact",
+      "properties": {
+        "evidence": {
+          "type": "array",
+          "description": "1 or 2 quotes.",
+          "title": "Evidence",
+          "items": {
+            "$ref": "#/$defs/Quote"
+          },
+          "minItems": 1
+        },
+        "value": {
+          "type": "string",
+          "title": "Value"
+        },
+        "inferred": {
+          "type": "boolean",
+          "description": "true if the value is not stated in the quotes but follows from them (combined, converted or paraphrased beyond rewording).",
+          "title": "Inferred"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "evidence",
+        "value",
+        "inferred"
+      ]
+    },
+    "FlaggedLimitation": {
+      "type": "object",
+      "title": "FlaggedLimitation",
+      "properties": {
+        "value": {
+          "type": "string",
+          "title": "Value"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value"
+      ]
+    },
+    "KeyEquation": {
+      "type": "object",
+      "title": "KeyEquation",
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The \\label key of the equation, or null if it has none.",
+          "title": "Label"
+        },
+        "latex": {
+          "type": "string",
+          "description": "The equation body copied from the source.",
+          "title": "Latex"
+        },
+        "meaning": {
+          "type": "string",
+          "title": "Meaning"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "latex",
+        "meaning"
+      ]
+    },
+    "KeyFigure": {
+      "type": "object",
+      "title": "KeyFigure",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "The \\label key of the figure environment.",
+          "title": "Label"
+        },
+        "why": {
+          "type": "string",
+          "title": "Why"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "why"
+      ]
+    },
+    "Limitation": {
+      "type": "object",
+      "title": "Limitation",
+      "properties": {
+        "evidence": {
+          "type": "array",
+          "description": "1 or 2 quotes.",
+          "title": "Evidence",
+          "items": {
+            "$ref": "#/$defs/Quote"
+          },
+          "minItems": 1
+        },
+        "value": {
+          "type": "string",
+          "title": "Value"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "evidence",
+        "value"
+      ]
+    },
+    "Opinion": {
+      "type": "object",
+      "description": "The agent's own judgement, never the paper's claims.",
+      "title": "Opinion",
+      "properties": {
+        "limitations_flagged": {
+          "type": "array",
+          "description": "At most 3.",
+          "title": "Limitations Flagged",
+          "items": {
+            "$ref": "#/$defs/FlaggedLimitation"
+          }
+        },
+        "deep_read": {
+          "$ref": "#/$defs/DeepRead"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "limitations_flagged",
+        "deep_read"
+      ]
+    },
+    "QuestionMatch": {
+      "type": "object",
+      "title": "QuestionMatch",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "A research question id, such as Q1.",
+          "title": "Id"
+        },
+        "why": {
+          "type": "string",
+          "title": "Why"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "why"
+      ]
+    },
+    "Quote": {
+      "type": "object",
+      "title": "Quote",
+      "properties": {
+        "quote": {
+          "type": "string",
+          "description": "Copied character for character from the paper text, LaTeX included. One contiguous span of 5-60 words inside one paragraph. No ellipses.",
+          "title": "Quote"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "quote"
+      ]
+    }
+  },
+  "type": "object",
+  "title": "CardDraft",
+  "properties": {
+    "tldr": {
+      "type": "string",
+      "description": "Two sentences: what they did and the main result.",
+      "title": "Tldr"
+    },
+    "key_results": {
+      "type": "array",
+      "description": "1 to 5, most important first.",
+      "title": "Key Results",
+      "items": {
+        "$ref": "#/$defs/Fact"
+      },
+      "minItems": 1
+    },
+    "assumptions": {
+      "type": "array",
+      "description": "At most 4.",
+      "title": "Assumptions",
+      "items": {
+        "$ref": "#/$defs/Fact"
+      }
+    },
+    "system": {
+      "$ref": "#/$defs/Fact"
+    },
+    "method": {
+      "$ref": "#/$defs/Fact"
+    },
+    "baselines": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Fact"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "null if the paper compares against nothing."
+    },
+    "claimed_advance": {
+      "$ref": "#/$defs/Fact"
+    },
+    "limitations_stated": {
+      "type": "array",
+      "description": "At most 4.",
+      "title": "Limitations Stated",
+      "items": {
+        "$ref": "#/$defs/Limitation"
+      }
+    },
+    "key_equations": {
+      "type": "array",
+      "description": "At most 3.",
+      "title": "Key Equations",
+      "items": {
+        "$ref": "#/$defs/KeyEquation"
+      }
+    },
+    "key_figures": {
+      "type": "array",
+      "description": "At most 3.",
+      "title": "Key Figures",
+      "items": {
+        "$ref": "#/$defs/KeyFigure"
+      }
+    },
+    "code_data": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Fact"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "null if the paper links no code or data."
+    },
+    "questions": {
+      "type": "array",
+      "description": "At most 4.",
+      "title": "Questions",
+      "items": {
+        "$ref": "#/$defs/QuestionMatch"
+      }
+    },
+    "opinion": {
+      "$ref": "#/$defs/Opinion"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "tldr",
+    "key_results",
+    "assumptions",
+    "system",
+    "method",
+    "baselines",
+    "claimed_advance",
+    "limitations_stated",
+    "key_equations",
+    "key_figures",
+    "code_data",
+    "questions",
+    "opinion"
+  ]
+}

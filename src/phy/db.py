@@ -196,5 +196,98 @@ def record_source(
         )
 
 
+def record_run_call(
+    conn: sqlite3.Connection,
+    *,
+    run_id: str,
+    stage: str,
+    arxiv_id: str | None,
+    model: str | None,
+    prompt_version: str | None,
+    ok: bool,
+    error: str | None,
+    tokens_in: int,
+    tokens_out: int,
+    cache_read_tokens: int,
+    cache_write_tokens: int,
+    cost_usd: float,
+    started_at: str,
+    ended_at: str,
+    log_path: str,
+) -> None:
+    """Fold one model call into its run's row: tokens and cost add up, and one failed call
+    makes the run failed."""
+    with conn:
+        conn.execute(
+            "INSERT INTO runs (id, stage, arxiv_id, status, error, model, prompt_version,"
+            " tokens_in, tokens_out, cache_read_tokens, cache_write_tokens, cost_usd, started_at,"
+            " ended_at, log_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            " ON CONFLICT (id) DO UPDATE SET"
+            " status = CASE WHEN runs.status = 'failed' THEN 'failed' ELSE excluded.status END,"
+            " error = coalesce(runs.error, excluded.error),"
+            " tokens_in = runs.tokens_in + excluded.tokens_in,"
+            " tokens_out = runs.tokens_out + excluded.tokens_out,"
+            " cache_read_tokens = runs.cache_read_tokens + excluded.cache_read_tokens,"
+            " cache_write_tokens = runs.cache_write_tokens + excluded.cache_write_tokens,"
+            " cost_usd = runs.cost_usd + excluded.cost_usd, ended_at = excluded.ended_at",
+            (
+                run_id,
+                stage,
+                arxiv_id,
+                "ok" if ok else "failed",
+                error,
+                model,
+                prompt_version,
+                tokens_in,
+                tokens_out,
+                cache_read_tokens,
+                cache_write_tokens,
+                cost_usd,
+                started_at,
+                ended_at,
+                log_path,
+            ),
+        )
+
+
+def get_run(conn: sqlite3.Connection, run_id: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
+
+
+def get_card(conn: sqlite3.Connection, arxiv_id: str, version: int) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM cards WHERE arxiv_id = ? AND version = ?", (arxiv_id, version)
+    ).fetchone()
+
+
+def write_draft_card(
+    conn: sqlite3.Connection,
+    arxiv_id: str,
+    version: int,
+    card_json: str,
+    model: str,
+    prompt_version: str,
+    schema_version: str,
+    run_id: str,
+) -> int:
+    """Store a draft Card, replacing the Paper version's Card if it has one (`read --force`):
+    the row keeps its id and loses everything Verify had added."""
+    now = _now()
+    with conn:
+        row = conn.execute(
+            "INSERT INTO cards (arxiv_id, version, card_json, status, model, prompt_version,"
+            " schema_version, run_id, created_at, updated_at)"
+            " VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?) ON CONFLICT (arxiv_id, version)"
+            " DO UPDATE SET card_json = excluded.card_json, status = 'draft',"
+            " unsupported_count = NULL, inferred_count = NULL, invented_numbers_json = NULL,"
+            " warnings_json = NULL, model = excluded.model,"
+            " prompt_version = excluded.prompt_version,"
+            " schema_version = excluded.schema_version, run_id = excluded.run_id,"
+            " updated_at = excluded.updated_at RETURNING id",
+            (arxiv_id, version, card_json, model, prompt_version, schema_version, run_id, now, now),
+        ).fetchone()
+    return row["id"]
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
