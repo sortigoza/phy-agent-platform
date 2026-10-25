@@ -18,10 +18,11 @@ import json
 import re
 import sqlite3
 import unicodedata
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
 import structlog
 from pydantic import ValidationError
@@ -122,19 +123,23 @@ def canonicalise_mapped(text: str, source_type: SourceType) -> tuple[str, list[i
 
 
 _SUPERSCRIPTS = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺", "0123456789-+")
-# Digits glued to an identifier are not numbers: after a letter, digit, `_`, `^` or `\\` (also
-# `^{`, `_{`), or before a letter other than an `x`/`×` multiplier. The atomic group keeps a
-# rejected token from matching a shorter prefix of itself (`12D` is not `1`).
+_POWER = r"10(?:\^\{?(?P<{0}>[-+−]?\d+)\}?|(?P<{0}_sup>[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))"
+# Digits glued to an identifier are not numbers: after a digit, `.`, `_`, `^` or `\` (also
+# `^{`, `_{` and those with a sign), after a letter unless it ends a control word (`\pm0.06`,
+# checked in `numbers()`), or before a letter other than an `x`/`×` multiplier. The atomic
+# group keeps a rejected token from matching a shorter prefix of itself (`12D` is not `1`).
 NUMBER = re.compile(
     r"""
-    (?<![\w\\^])(?<!\^\{)(?<!_\{)
+    (?<![\d._\\^])(?<![\^_][-+−])(?<![\^_]\{)(?<![\^_]\{[-+−])
     (?>
-      (?P<int>\d+)(?:\.(?P<frac>\d+))?
+      """
+    + _POWER.replace("{0}", "power")
+    + r"""
+    | (?P<int>\d+)(?:\.(?P<frac>\d+))?
       (?:\((?P<unc>\d+)\))?
-      (?:
-        [eE](?P<e>[-+−]?\d+)
-      | \s*(?:\\times|×)\s*10(?:\^\{?(?P<tex>[-+−]?\d+)\}?|(?P<sup>[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))
-      )?
+      (?:[eE](?P<e>[-+−]?\d+)|\s*(?:\\times|×)\s*"""
+    + _POWER.replace("{0}", "times")
+    + r""")?
     )
     (?:(?=[x×](?!\w))|(?!\w))
     """,
@@ -153,23 +158,39 @@ class Number:
 
 
 def numbers(text: str) -> list[Number]:
-    """Every number in a canonical text, in order; an error bar `4.03(6)` gives two. Signs are
-    ignored, because dashes are ambiguous (`6-14`, `m^2=-4`)."""
+    """Every number in a canonical text, in order; an error bar `4.03(6)` gives two, and a bare
+    power of ten `10^{-3}` is `1e-3`. Signs are ignored, because dashes are ambiguous (`6-14`,
+    `m^2=-4`)."""
     found = []
     for m in NUMBER.finditer(text):
-        frac = m.group("frac") or ""
-        exponent = m.group("e") or m.group("tex") or (m.group("sup") or "").translate(_SUPERSCRIPTS)
-        exp = int(exponent.replace("−", "-")) if exponent else 0
+        if _after_identifier(text, m.start()):
+            continue
         token = m.group().strip()
-        found.append(
-            Number(
-                Decimal(f"{m.group('int')}.{frac}").scaleb(exp), _sig(m.group("int") + frac), token
-            )
-        )
+        if m.group("int") is None:
+            found.append(Number(Decimal(1).scaleb(_exponent(m, "power")), 1, token))
+            continue
+        frac = m.group("frac") or ""
+        exp = int(m.group("e").replace("−", "-")) if m.group("e") else _exponent(m, "times")
+        mantissa = Decimal(f"{m.group('int')}.{frac}")
+        found.append(Number(mantissa.scaleb(exp), _sig(m.group("int") + frac), token))
         if m.group("unc"):
             unc = m.group("unc")
             found.append(Number(Decimal(unc).scaleb(exp - len(frac)), _sig(unc), token))
     return found
+
+
+def _after_identifier(text: str, at: int) -> bool:
+    """Whether letters end just before `at` (`H2O`), other than a control word (`\\pm0.06`)."""
+    start = at
+    while start > 0 and text[start - 1].isalpha():
+        start -= 1
+    return start < at and (start == 0 or text[start - 1] != "\\")
+
+
+def _exponent(m: re.Match, name: str) -> int:
+    """The power of ten written as `10^{n}` or `10ⁿ` in group `name`, else 0."""
+    exponent = m.group(name) or (m.group(f"{name}_sup") or "").translate(_SUPERSCRIPTS)
+    return int(exponent.replace("−", "-")) if exponent else 0
 
 
 def _sig(digits: str) -> int:
@@ -300,8 +321,8 @@ class _Heading:
 
 @dataclass(frozen=True)
 class _Env:
-    """A labelled environment: its name, raw span, body span (inside `\\begin`…`\\end`) and
-    every `\\label` in it, with offsets."""
+    """An environment: its name, raw span, body span (inside `\\begin`…`\\end`) and every
+    `\\label` in it, with offsets."""
 
     name: str
     start: int
@@ -331,12 +352,8 @@ class Source:
             self.headings = _headings(raw)
             boundaries += [h.at for h in self.headings]
             boundaries += [m.start() for m in re.finditer(r"\\appendix(?![a-zA-Z])", raw)]
-            self.abstracts = [(start, end) for _, start, end, _ in _envs(raw, ["abstract"])]
-            self.envs = [
-                _Env(name, start, end, body, labels)
-                for name, start, end, body in _envs(raw, LABELLED_ENVS)
-                if (labels := [(m.start(), m.group(1)) for m in LABEL.finditer(raw, start, end)])
-            ]
+            self.abstracts = [(env.start, env.end) for env in _envs(raw, ["abstract"])]
+            self.envs = [env for env in _envs(raw, LABELLED_ENVS) if env.labels]
             self.labels = {m.group(1) for m in LABEL.finditer(raw)}
         self.boundaries = sorted(boundaries)
 
@@ -432,14 +449,15 @@ def verify_card(draft: CardDraft, source: Source) -> Verified:
     quote not found, or with a number in its value the source doesn't contain (an invented
     number); otherwise `inferred` when the model said so or a number in its value is missing
     from its own quotes (an ungrounded number)."""
-    draft, warnings = _trim(draft)
+    draft, warnings = _apply_caps(draft)
     source_numbers = set(numbers(source.text))
     invented: list[InventedNumber] = []
 
     def numbers_in(text: str) -> list[Number]:
         return numbers(canonicalise(text, source.source_type))
 
-    def invented_in(path: str, value: str) -> bool:
+    def record_invented(path: str, value: str) -> bool:
+        """Add the value's invented numbers to the Card's list; whether it has any."""
         missing = _unique(n.text for n in numbers_in(value) if n not in source_numbers)
         invented.extend(InventedNumber(path, number) for number in missing)
         return bool(missing)
@@ -450,12 +468,12 @@ def verify_card(draft: CardDraft, source: Source) -> Verified:
         ungrounded = _unique(
             n.text for n in numbers_in(f.value) if n in source_numbers and n not in quoted
         )
-        invents = invented_in(path, f.value)
+        invents = record_invented(path, f.value)
         support: Support = (
             "unsupported"
             if not quotes or not all(q.found for q in quotes) or invents
             else "inferred"
-            if getattr(f, "inferred", False) or ungrounded
+            if (isinstance(f, Fact) and f.inferred) or ungrounded
             else "supported"
         )
         return {
@@ -465,27 +483,9 @@ def verify_card(draft: CardDraft, source: Source) -> Verified:
             "ungrounded_numbers": ungrounded,
         }
 
-    def fact(path: str, f: Fact | None) -> dict | None:
-        return None if f is None else checked(path, f)
-
-    invented_in("tldr", draft.tldr)
+    record_invented("tldr", draft.tldr)
     warnings += _label_warnings(draft, source)
-    card = Card.model_validate(
-        {
-            **draft.model_dump(),
-            "key_results": [fact(f"key_results[{i}]", f) for i, f in enumerate(draft.key_results)],
-            "assumptions": [fact(f"assumptions[{i}]", f) for i, f in enumerate(draft.assumptions)],
-            "system": fact("system", draft.system),
-            "method": fact("method", draft.method),
-            "baselines": fact("baselines", draft.baselines),
-            "claimed_advance": fact("claimed_advance", draft.claimed_advance),
-            "limitations_stated": [
-                checked(f"limitations_stated[{i}]", f)
-                for i, f in enumerate(draft.limitations_stated)
-            ],
-            "code_data": fact("code_data", draft.code_data),
-        }
-    )
+    card = Card.model_validate({**draft.model_dump(), **_map_facts(draft, checked)})
     supports = [f.support for f in facts(card)]
     return Verified(
         card=card,
@@ -509,7 +509,7 @@ FLAGGED_CAP = 3
 EVIDENCE_CAP = 2
 
 
-def _trim(draft: CardDraft) -> tuple[CardDraft, list[CardWarning]]:
+def _apply_caps(draft: CardDraft) -> tuple[CardDraft, list[CardWarning]]:
     """The draft with every over-cap list cut to its first N, so dropped items are never
     checked, and an `over_cap` warning per list. The raw response stays in the run trace."""
     warnings: list[CardWarning] = []
@@ -519,9 +519,7 @@ def _trim(draft: CardDraft) -> tuple[CardDraft, list[CardWarning]]:
             warnings.append(CardWarning("over_cap", path, f"dropped {len(items) - cap}"))
         return items[:cap]
 
-    def evidence(path: str, f: Fact | Limitation | None):
-        if f is None:
-            return None
+    def evidence(path: str, f: Fact | Limitation) -> Fact | Limitation:
         return f.model_copy(
             update={"evidence": capped(f"{path}.evidence", f.evidence, EVIDENCE_CAP)}
         )
@@ -533,13 +531,8 @@ def _trim(draft: CardDraft) -> tuple[CardDraft, list[CardWarning]]:
     opinion = draft.opinion.model_copy(
         update={"limitations_flagged": capped("opinion.limitations_flagged", flagged, FLAGGED_CAP)}
     )
-    for name in ("key_results", "assumptions", "limitations_stated"):
-        lists[name] = [evidence(f"{name}[{i}]", f) for i, f in enumerate(lists[name])]
-    singles = {
-        name: evidence(name, getattr(draft, name))
-        for name in ("system", "method", "baselines", "claimed_advance", "code_data")
-    }
-    return draft.model_copy(update={**lists, **singles, "opinion": opinion}), warnings
+    draft = draft.model_copy(update={**lists, "opinion": opinion})
+    return draft.model_copy(update=_map_facts(draft, evidence)), warnings
 
 
 def _label_warnings(draft: CardDraft, source: Source) -> list[CardWarning]:
@@ -568,19 +561,46 @@ def _label_warnings(draft: CardDraft, source: Source) -> list[CardWarning]:
     return warnings
 
 
-def _unique(items) -> list:
+def _unique(items: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(items))
+
+
+# Every Card field that has Support, single or a list, in Card order.
+FACT_FIELDS = [
+    "key_results",
+    "assumptions",
+    "system",
+    "method",
+    "baselines",
+    "claimed_advance",
+    "limitations_stated",
+    "code_data",
+]
+
+
+def _map_facts(card: CardDraft, fn: Callable[[str, Any], Any]) -> dict[str, Any]:
+    """Each Fact field of the Card with every Fact replaced by `fn(path, fact)`, where path is
+    the field path (`system`, `key_results[0]`); a null field stays null."""
+    mapped: dict[str, Any] = {}
+    for name in FACT_FIELDS:
+        value = getattr(card, name)
+        if isinstance(value, list):
+            mapped[name] = [fn(f"{name}[{i}]", f) for i, f in enumerate(value)]
+        else:
+            mapped[name] = None if value is None else fn(name, value)
+    return mapped
 
 
 def facts(card: Card) -> list[VerifiedFact | VerifiedLimitation]:
     """Every field that has Support, in Card order."""
-    singles = [card.system, card.method, card.baselines, card.claimed_advance, card.code_data]
-    return [
-        *card.key_results,
-        *card.assumptions,
-        *[f for f in singles if f is not None],
-        *card.limitations_stated,
-    ]
+    found: list[VerifiedFact | VerifiedLimitation] = []
+    for name in FACT_FIELDS:
+        value = getattr(card, name)
+        if isinstance(value, list):
+            found += value
+        elif value is not None:
+            found.append(value)
+    return found
 
 
 def _headings(raw: str) -> list[_Heading]:
@@ -642,9 +662,9 @@ def _braced(raw: str, at: int) -> tuple[str, int] | None:
     return None
 
 
-def _envs(raw: str, names: list[str]) -> list[tuple[str, int, int, tuple[int, int]]]:
-    """(name, start, end, body span) of every environment with one of these names, starred too,
-    nesting allowed, in order of their start."""
+def _envs(raw: str, names: list[str]) -> list[_Env]:
+    """Every environment with one of these names, starred too, nesting allowed, in order of
+    their start."""
     spans = []
     open_: list[re.Match] = []
     for m in ENV.finditer(raw):
@@ -655,5 +675,8 @@ def _envs(raw: str, names: list[str]) -> list[tuple[str, int, int, tuple[int, in
             open_.append(m)
         elif open_ and open_[-1].group(2) == name:
             begin = open_.pop()
-            spans.append((name, begin.start(), m.end(), (begin.end(), m.start())))
-    return sorted(spans, key=lambda span: span[1])
+            labels = [
+                (lm.start(), lm.group(1)) for lm in LABEL.finditer(raw, begin.start(), m.end())
+            ]
+            spans.append(_Env(name, begin.start(), m.end(), (begin.end(), m.start()), labels))
+    return sorted(spans, key=lambda env: env.start)
