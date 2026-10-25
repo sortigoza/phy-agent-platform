@@ -10,3 +10,6 @@ __pycache__/
 # Secrets and OS noise
 .env
 .DS_Store
+
+# Agent worktrees
+.claude/worktrees/

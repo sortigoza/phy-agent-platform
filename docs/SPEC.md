@@ -166,7 +166,7 @@ The Card schema is a Pydantic model in `src/phy/card.py`. It is the single sourc
 | Table | One row per | Written by | Key columns |
 | --- | --- | --- | --- |
 | `papers` | Paper | Watch | arxiv_id (PK), latest_version, title, authors, abstract, categories, primary_category, license, sets, first_seen_at, updated_at |
-| `paper_versions` | Paper version | Watch, Read | arxiv_id, version, announced_date, source_type (latex, pdf), local_path, sha256, fetched_at |
+| `paper_versions` | Paper version | Watch, Read | arxiv_id, version, submitted_at (from arXivRaw), first_seen_datestamp (OAI datestamp of the harvest that first carried this version), source_type (latex, pdf; detected by Read on download), local_path, sha256, fetched_at |
 | `state` | key | Watch | `watch.hwm` (date), `watch.last_success_at` |
 | `screenings` | Paper version | Filter | arxiv_id, version, prefilter (pass, fail, skipped), scores_json ({Q1..Q4: score, reason}), best_score, screened_in, model, prompt_version, run_id |
 | `cards` | Card | Read, Verify | id, arxiv_id, version, card_json, status (draft, verified, reviewed, stale), unsupported_count, model, prompt_version, schema_version, run_id |
@@ -197,6 +197,9 @@ Card fields are stored only inside `card_json` and queried with SQLite JSON func
 **Advancing the high-water mark.** The mark moves to the first page's `responseDate`, and only after all sets have completed. Otherwise it stays where it was.
 - Because OAI-PMH dates are whole days, the `from` day is always fetched again. That overlap is free, since upserts are idempotent.
 - Watch never takes the mark from `Identify`, which can return a cached response.
+- arXiv's CDN caches list responses for up to about 1 h (errors until UTC midnight), so a `responseDate` can be stale. It is never later than the data it covers, so the mark stays safe.
+- OAI errors come back as HTTP 200 with an `<error code=…>` element. `noRecordsMatch` is an empty window, not a failure. Retries apply to HTTP 429, HTTP 503 and network errors.
+- The client is hand-rolled with `httpx` and `lxml` (see the OAI-PMH client ticket in the M0 map). Tests replay recorded XML fixtures.
 
 **First run.** With no mark yet, `from` is today minus `watch.backfill_days` (default 14).
 

@@ -18,6 +18,8 @@ Every M0 build decision is locked, and M0 (SPEC §3) is cut into ordered, vertic
 
 <!-- one line per resolved ticket: [title](issues/NN-slug.md): gist -->
 
+- [OAI-PMH client: sickle or hand-rolled?](issues/03-oai-pmh-client.md): hand-rolled httpx + lxml (sickle is unmaintained and can't take our rate limiter); `from` is inclusive at UTC day level; errors come back as HTTP 200; the spec now records first_seen_datestamp instead of announced_date; fixtures are on branch `research/oai-pmh-client`.
+
 ## Not yet specified
 
 - **How the Golden eval diff is shown** (CLI text or a UI page, and the granularity of a Card diff). This becomes clear once the Card shape from the Card schema prototype exists.
