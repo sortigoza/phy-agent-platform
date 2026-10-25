@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- TRIMMED by research script: first 2 of 1300 records kept; everything else verbatim. -->
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2026-10-25T10:38:29Z</responseDate>
+                <request verb='ListRecords' resumptionToken='verb%3DListRecords%26metadataPrefix%3DarXivRaw%26from%3D2026-10-19%26until%3D2026-10-23%26set%3Dcs%253Acs%253ALG%26skip%3D371'>http://oaipmh.arxiv.org/oai</request>
+
+
+    <ListRecords>
+<record>
+                <header>
+        <identifier>oai:arXiv.org:2107.07455</identifier>
+        <datestamp>2026-10-19</datestamp>
+            <setSpec>cs:cs:LG</setSpec>
+            <setSpec>cs:cs:AI</setSpec>
+            <setSpec>stat:stat:ML</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2107.07455</id>
+        <submitter>Andrey Malinin Dr.</submitter>
+            <version version="v1">
+                <date>Thu, 15 Jul 2021 16:59:34 GMT</date>
+                <size>3035kb</size>
+                    <source_type>D</source_type>
+            </version>
+            <version version="v2">
+                <date>Fri, 23 Jul 2021 17:39:44 GMT</date>
+                <size>3185kb</size>
+                    <source_type>D</source_type>
+            </version>
+            <version version="v3">
+                <date>Fri, 11 Feb 2022 08:23:22 GMT</date>
+                <size>8026kb</size>
+                    <source_type>D</source_type>
+            </version>
+        <title>Shifts: A Dataset of Real Distributional Shift Across Multiple Large-Scale Tasks</title>
+        <authors>Andrey Malinin and Neil Band and Alexander Ganshin and German Chesnokov and Yarin Gal and Mark J. F. Gales and Alexey Noskov and Andrey Ploskonosov and Liudmila Prokhorenkova and Ivan Provilkov and Vatsal Raina and Vyas Raina and Denis Roginskiy and Mariya Shmatova and Panos Tigas and Boris Yangel</authors>
+        <categories>cs.LG cs.AI stat.ML</categories>
+            <license>http://arxiv.org/licenses/nonexclusive-distrib/1.0/</license>
+            <abstract>There has been significant research done on developing methods for improving robustness to distributional shift and uncertainty estimation. In contrast, only limited work has examined developing standard datasets and benchmarks for assessing these approaches. Additionally, most work on uncertainty estimation and robustness has developed new techniques based on small-scale regression or image classification tasks. However, many tasks of practical interest have different modalities, such as tabular data, audio, text, or sensor data, which offer significant challenges involving regression and discrete or continuous structured prediction. Thus, given the current state of the field, a standardized large-scale dataset of tasks across a range of modalities affected by distributional shifts is necessary. This will enable researchers to meaningfully evaluate the plethora of recently developed uncertainty quantification methods, as well as assessment criteria and state-of-the-art baselines. In this work, we propose the Shifts Dataset for evaluation of uncertainty estimates and robustness to distributional shift. The dataset, which has been collected from industrial sources and services, is composed of three tasks, with each corresponding to a particular data modality: tabular weather prediction, machine translation, and self-driving car (SDC) vehicle motion prediction. All of these data modalities and tasks are affected by real, &#34;in-the-wild&#34; distributional shifts and pose interesting challenges with respect to uncertainty estimation. In this work we provide a description of the dataset and baseline results for all tasks.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+<record>
+                <header>
+        <identifier>oai:arXiv.org:2505.24776</identifier>
+        <datestamp>2026-10-19</datestamp>
+            <setSpec>cs:cs:LG</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2505.24776</id>
+        <submitter>Zachary Bastiani</submitter>
+            <version version="v1">
+                <date>Fri, 30 May 2025 16:39:29 GMT</date>
+                <size>592kb</size>
+            </version>
+            <version version="v2">
+                <date>Fri, 16 Oct 2026 17:58:46 GMT</date>
+                <size>400kb</size>
+            </version>
+        <title>Mask-Based Deep Symbolic Regression</title>
+        <authors>Zachary Bastiani, Robert M. Kirby, Jacob Hochhalter, Shandian Zhe</authors>
+        <categories>cs.LG</categories>
+            <license>http://creativecommons.org/licenses/by-nc-sa/4.0/</license>
+            <abstract>Diffusion has emerged as a powerful framework for generative modeling, achieving remarkable success in applications such as image and audio synthesis. Enlightened by this progress, we propose a novel diffusion-based approach for symbolic regression. We construct a random mask-based diffusion and denoising process to generate diverse and high-quality equations. We integrate this generative processes with a token-wise Group Relative Policy Optimization (GRPO) method to conduct efficient reinforcement learning on the given measurement dataset. In addition, we introduce a long short-term risk-seeking policy to expand the pool of top-performing candidates, further enhancing performance. Extensive experiments and ablation studies have demonstrated the effectiveness of our approach.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+
+                    <resumptionToken expirationDate='2026-10-26T00:00:00Z'>verb%3DListRecords%26metadataPrefix%3DarXivRaw%26from%3D2026-10-22%26until%3D2026-10-23%26set%3Dcs%253Acs%253ALG%26skip%3D44</resumptionToken>
+
+    </ListRecords>
+</OAI-PMH>
