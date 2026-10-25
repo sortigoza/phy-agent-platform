@@ -73,6 +73,21 @@ class Paths:
     def papers(self) -> Path:
         return self.home / "papers"
 
+    def paper_dir(self, arxiv_id: str, version: int) -> Path:
+        """Raw download, unpacked tree and `flattened.txt` of one Paper version."""
+        return self.papers / f"{arxiv_id}v{version}"
+
+    def flattened(self, arxiv_id: str, version: int) -> Path:
+        return self.paper_dir(arxiv_id, version) / "flattened.txt"
+
+    def source_file(self, arxiv_id: str, version: int, fmt: str) -> Path:
+        """The download from `arxiv.org/src/`, named by its detected format (`tar.gz`, ...)."""
+        return self.paper_dir(arxiv_id, version) / f"source.{fmt}"
+
+    def source_tree(self, arxiv_id: str, version: int) -> Path:
+        """The unpacked LaTeX tree."""
+        return self.paper_dir(arxiv_id, version) / "src"
+
     @property
     def golden_sources(self) -> Path:
         return self.home / "golden_sources"
@@ -136,7 +151,7 @@ class WatchConfig(_Strict):
 
 class ArxivConfig(_Strict):
     min_interval_s: Annotated[float, Field(ge=3.0)]
-    max_retries: Annotated[int, Field(ge=0)]
+    max_retries: Annotated[int, Field(ge=1)]  # attempts in all, including the first
 
 
 class FilterConfig(_Strict):

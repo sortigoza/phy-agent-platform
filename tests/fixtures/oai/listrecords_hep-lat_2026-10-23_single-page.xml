@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2026-10-25T10:36:14Z</responseDate>
+                <request verb="ListRecords" metadataPrefix="arXivRaw" from="2026-10-23" until="2026-10-23" set="physics:hep-lat">http://oaipmh.arxiv.org/oai</request>
+
+
+    <ListRecords>
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2510.13771</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-ph</setSpec>
+            <setSpec>physics:hep-ex</setSpec>
+            <setSpec>physics:hep-lat</setSpec>
+            <setSpec>physics:nucl-th</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2510.13771</id>
+        <submitter>Patrick Barry</submitter>
+            <version version="v1">
+                <date>Wed, 15 Oct 2025 17:22:02 GMT</date>
+                <size>935kb</size>
+            </version>
+            <version version="v2">
+                <date>Wed, 16 Sep 2026 04:23:27 GMT</date>
+                <size>2985kb</size>
+            </version>
+        <title>First simultaneous analysis of transverse momentum dependent and collinear parton distributions in the proton</title>
+        <authors>P. C. Barry, A. Prokudin, T. Anderson, C. Cocuzza, L. Gamberg, W. Melnitchouk, E. Moffat, D. Pitonyak, J.-W. Qiu, N. Sato, A. Vladimirov, R. M. Whitehill</authors>
+        <categories>hep-ph hep-ex hep-lat nucl-th</categories>
+            <comments>8 pages, 4 figures; 7 pages, 7 figures of Supplemental Material</comments>
+            <report-no>JLAB-THY-25-4573, IPARCOS-UCM-25-051</report-no>
+            <journal-ref>Phys. Rev. Lett., 137, 171902 (2026)</journal-ref>
+            <doi>10.1103/m23z-bt9y</doi>
+            <license>http://arxiv.org/licenses/nonexclusive-distrib/1.0/</license>
+            <abstract>We present the first simultaneous global QCD analysis of unpolarized transverse momentum dependent (TMD) and collinear parton distribution functions (PDFs) in the proton. Our study incorporates data from deep-inelastic scattering, Drell-Yan, inclusive weak boson, $W$+\,charm, and jet production involving PDFs, as well as TMD Drell-Yan and $Z$-boson production data from fixed target and collider experiments sensitive to both TMD and collinear distributions. The analysis is performed at next-to-next-to-leading logarithmic accuracy for QCD resummation in TMD observables and next-to-leading order for observables described in collinear factorization. The combined analysis improves knowledge of both TMD and collinear PDFs, particularly in the sea-quark sector, providing a consistent simultaneous description of the aforementioned observables.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2603.09977</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-th</setSpec>
+            <setSpec>physics:hep-lat</setSpec>
+            <setSpec>physics:hep-ph</setSpec>
+            <setSpec>physics:nucl-th</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2603.09977</id>
+        <submitter>Aleksey Cherman</submitter>
+            <version version="v1">
+                <date>Tue, 10 Mar 2026 17:59:59 GMT</date>
+                <size>111kb</size>
+            </version>
+            <version version="v2">
+                <date>Tue, 14 Apr 2026 20:07:05 GMT</date>
+                <size>499kb</size>
+            </version>
+            <version version="v3">
+                <date>Thu, 22 Oct 2026 16:46:52 GMT</date>
+                <size>331kb</size>
+            </version>
+        <title>Does hot QCD have a conformal manifold in the chiral limit?</title>
+        <authors>Shi Chen, Aleksey Cherman, Robert D. Pisarski</authors>
+        <categories>hep-th hep-lat hep-ph nucl-th</categories>
+            <comments>PRL version; 9 pages + 8 pages of supplemental material, 3 figures</comments>
+            <journal-ref>Phys. Rev. Lett. 137, 061903 (2026)</journal-ref>
+            <doi>10.1103/nvtc-jw59</doi>
+            <license>http://creativecommons.org/licenses/by/4.0/</license>
+            <abstract>Recent lattice evidence may suggest the chiral phase transition in QCD is second order for $N_f \ge 2$ massless flavors. We constrain conformal field theory (CFT) descriptions of a critical line in temperature $T$ and imaginary baryon chemical potential $\theta_B = i\mu_B/T$. An &#39;t Hooft anomaly at general $\theta_B$ constrains the transition even at $\theta_B = 0$, leaving only three minimal scenarios. The best-motivated scenario for $N_f\ge3$, and perhaps also $N_f = 2$, is beyond Ginzburg-Landau, featuring a conformal manifold of $\theta_B$-dependent universality classes with an exactly marginal operator related to baryon density.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2608.04563</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-ph</setSpec>
+            <setSpec>physics:hep-ex</setSpec>
+            <setSpec>physics:hep-lat</setSpec>
+            <setSpec>physics:hep-th</setSpec>
+            <setSpec>physics:nucl-th</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2608.04563</id>
+        <submitter>Leonid Glozman</submitter>
+            <version version="v1">
+                <date>Wed, 05 Aug 2026 07:56:32 GMT</date>
+                <size>83kb</size>
+            </version>
+            <version version="v2">
+                <date>Mon, 10 Aug 2026 09:45:48 GMT</date>
+                <size>84kb</size>
+            </version>
+            <version version="v3">
+                <date>Thu, 22 Oct 2026 09:38:29 GMT</date>
+                <size>85kb</size>
+            </version>
+        <title>A large size of the pion-like excitations in the stringy fluid above $T_{ch}$ is model independent and required by current algebra</title>
+        <authors>L. Ya. Glozman</authors>
+        <categories>hep-ph hep-ex hep-lat hep-th nucl-th</categories>
+            <comments>9 pages, some clarifications and reference have been added, accepted by PLB</comments>
+            <license>http://creativecommons.org/licenses/by/4.0/</license>
+            <abstract>Multiple lattice evidences support the existence of a confining but chirally symmetric stringy fluid regime of QCD above the chiral symmetry restoration temperature at T_{ch} ~ 155 MeV. This regime is characterized by an approximate chiral spin symmetry and its extensions which means that the propagating excitations represent the chirally symmetric quarks connected into color singlets by the chromoelectric string. Clear \pi,\pi&#39; peaks above T_{ch} were extracted on the lattice from the spatial and temporal correlators, which become broader with temperature and disappear roughly at $3T_{ch}$. The meson-like excitations above T_{ch} were studied within the manifestly confining and chirally symmetric model. It has been demonstrated that the chiral symmetry restoration in the confining regime happens because of Pauli blocking of the levels, required for the existence of the quark condensate, by the thermal quark excitation. The same Pauli blocking leads to a huge swelling of the low-spin mesons above T_{ch} which become infinitely large in the chiral limit. This property should be crucial for the explanation of the high collectivity and a very small mean-free path of the constituents above $T_{ch}$ seen experimentally. Here we demonstrate that the swelling of pions above T_{ch} is a model-independent effect required by current algebra.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2610.30341</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-lat</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2610.30341</id>
+        <submitter>Merritt Cook</submitter>
+            <version version="v1">
+                <date>Wed, 21 Oct 2026 19:00:54 GMT</date>
+                <size>2646kb</size>
+            </version>
+        <title>Higgs Fluctuation Solver in Four Dimensions: Part I-A Matrix-Free Global-Scalar Bounce and Determinant-Renormalization Audit</title>
+        <authors>Merritt s. Cook</authors>
+        <categories>hep-lat</categories>
+            <comments>11 pages, 12 figures</comments>
+            <msc-class>81T10, 81T27</msc-class>
+            <license>http://creativecommons.org/licenses/by/4.0/</license>
+            <abstract>We report a matrix-free numerical pipeline for semiclassical false-vacuum decay in a four-component global-O(4) scalar theory in four Euclidean dimensions. The calculation combines continuum bounce shooting, action relaxation, channel-resolved fluctuation spectra, deflated stochastic Lanczos quadrature (SLQ), and a continuum partial-wave determinant with Gel&#39;fand-Yaglom radial ratios and large-angular-momentum subtraction. For the benchmark potential, the bounce action is B = 145.203947 and the tail residual is 0.281955%. On an L = 26, h = 0.8 lattice, the relaxed field achieves an RMS EOM residual of 4.43 x 10^-12; its low spectrum contains one negative radial mode, four lattice translations, and three near-zero internal modes. The 16-probe bare SLQ trace-log is -2079.9042 +/- 6.4504. Under the subtraction prescription, the scalar partial-wave calculation returns a primed trace-log of 40.9324 at mu = mF = sqrt(0.4), giving a determinant factor of 1.2931 x 10^-9. We show the leading rho^8 potential is not closed under its scalar one-loop divergence: local rho^10 and rho^12 counterterms are required, leaving finite coefficients unmatched; hence this is a prescription-level result, not a complete EFT prediction. The translation-normalized scalar expression is 5.9974 x 10^-70 in lattice energy units to the fourth power, omitting the internal-orientation Jacobian. We summarize tested SU(2) operator and pole-algebra infrastructure, identifying finite full-gauge matching and controlled limits as open work.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2610.30393</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-ph</setSpec>
+            <setSpec>physics:hep-lat</setSpec>
+            <setSpec>physics:hep-th</setSpec>
+            <setSpec>physics:nucl-th</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2610.30393</id>
+        <submitter>Bruno Da Silva Lopes</submitter>
+            <version version="v1">
+                <date>Wed, 21 Oct 2026 19:56:49 GMT</date>
+                <size>1986kb</size>
+            </version>
+        <title>Thermomagnetic enhancement of conserved-charge correlations in a lattice-constrained PNJL model</title>
+        <authors>Bruno S. Lopes, Arthur E. B. Pasqualotto, Jandir J. Buttenbender Filho, Dyana C. Duarte, Ricardo L. S. Farias</authors>
+        <categories>hep-ph hep-lat hep-th nucl-th</categories>
+            <comments>15 pages, 9 figures</comments>
+            <license>http://arxiv.org/licenses/nonexclusive-distrib/1.0/</license>
+            <abstract>Conserved-charge correlations offer a promising probe of magnetic fields in strongly interacting matter. We investigate their magnetic response and the finite-density equation of state within a lattice-constrained three-flavor Polyakov--Nambu--Jona-Lasinio model. A thermomagnetic scalar coupling, inferred by Gaussian process regression from lattice QCD results for the average light-quark condensate, incorporates inverse magnetic catalysis into the effective interaction. Without fitting conserved-charge observables, the resulting framework substantially improves their magnetic-field dependence and crossover behavior compared with the fixed-coupling model. In particular, it captures the pronounced magnetic enhancement of the baryon--electric-charge correlation and related susceptibility ratios, supporting their use as QCD magnetometers. The comparison demonstrates that the medium dependence of the effective interaction is essential to describe this response within the model. We further calculate pressure Taylor coefficients through sixth order and reconstruct the pressure and baryon density at nonzero baryon chemical potential. Our results show that lattice information from a single chiral observable constrains a broad thermodynamic response, connecting inverse magnetic catalysis, conserved-charge correlations, and the equation of state in a common framework. This provides a lattice-constrained basis for investigating magnetic-field signatures and finite-density thermodynamics in QCD matter.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2610.30850</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-lat</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2610.30850</id>
+        <submitter>Kei Tohme</submitter>
+            <version version="v1">
+                <date>Thu, 22 Oct 2026 07:28:28 GMT</date>
+                <size>124kb</size>
+            </version>
+        <title>Spontaneous chiral-symmetry breaking in four-dimensional QCD with $A_x=A_y=0$ projection in dimensional reduction gauge</title>
+        <authors>Kei Tohme (Kyoto U.), Hideo Suganuma (Kyoto U.)</authors>
+        <categories>hep-lat</categories>
+            <comments>7 pages, 4 figures</comments>
+            <license>http://creativecommons.org/licenses/by/4.0/</license>
+            <abstract>We investigate spontaneous chiral-symmetry breaking in four-dimensional (4D) QCD in the dimensional reduction (DR) gauge, defined so as to minimize $R_{\mathrm{DR}}\equiv~\int d^{4}s ~ \mathrm{Tr} \left[ A_{x}^{2}(s) + A_{y}^{2}(s) \right]$. We consider ``$tz$-projection&#34; of $A_{x,y}(s) \to 0$ and ``$xy$-projection&#34; of $A_{t,z}(s) \to 0$, respectively, for the gauge configuration generated in the DR gauge, in a similar sense to Abelian, monopole and photon projections in the maximally Abelian gauge. The chiral condensate is estimated from the low-lying Dirac-eigenvalue density $\rho(\lambda)$ using the Banks-Casher relation. By the $tz$-projection in the DR gauge, the chiral condensate is largely reserved. In contrast, the chiral condensate becomes zero by the $xy$-projection in the DR gauge. This indicates that $A_{t}(s)$ and $A_{z}(s)$ play a dominant role, while $A_{x}(s)$ and $A_{y}(s)$ play no role, in spontaneous chiral-symmetry breaking in the DR gauge.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2610.30982</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-lat</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2610.30982</id>
+        <submitter>Minjae Choi</submitter>
+            <version version="v1">
+                <date>Thu, 22 Oct 2026 09:29:39 GMT</date>
+                <size>664kb</size>
+            </version>
+        <title>Learning Low Modes of the Wilson Dirac Operator with Gauge-Equivariant Networks</title>
+        <authors>Minjae Choi, Hiroshi Ohno</authors>
+        <categories>hep-lat</categories>
+            <comments>9 pages, 4 figures, 1 table. Proceedings of the 43rd International Symposium on Lattice Field Theory (Lattice 2026), 26 July - 1 August 2026, University of Maryland, College Park, USA</comments>
+            <license>http://creativecommons.org/licenses/by-nc-nd/4.0/</license>
+            <abstract>In adaptive multigrid, test vectors that better approximate the low-mode subspace of the Wilson Dirac operator $D$ can reduce the solve time, but their construction can be costly. In some cases, the setup takes longer than a single solve. To reduce the cost of generating test vectors, we train networks built from gauge-equivariant parallel-transport layers once on a quenched ensemble, using a Rayleigh-Ritz loss for $D^\dagger D$. We then test whether the trained networks maintain their performance at other hopping parameters and on configurations not used in training. In these tests, the network outputs are used as test vectors, and the costly $V$-cycle refinement in the adaptive setup is omitted to reduce the setup time. This substantially reduces the setup time while leaving the solve time largely unchanged in most cases. Near the critical hopping parameter $\kappa_c$, the solve time is also reduced in some cases.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2610.31281</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-lat</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2610.31281</id>
+        <submitter>Okuto Morikawa</submitter>
+            <version version="v1">
+                <date>Thu, 22 Oct 2026 13:47:45 GMT</date>
+                <size>318kb</size>
+            </version>
+        <title>Dyon Condensation at $\theta=2\pi$ from Wilson-&#39;t Hooft Loops in Yang-Mills Theory</title>
+        <authors>Hiromasa Watanabe, Issaku Kanamori, Okuto Morikawa, Yuki Nagai, Yuya Tanizaki, Akio Tomiya</authors>
+        <categories>hep-lat</categories>
+            <comments>8 pages, 5 figures, 2 tables. Talk presented at the 43rd International Symposium on Lattice Field Theory (Lattice2026), July 26 - August 1st, 2026, University of Maryland, College Park, USA</comments>
+            <report-no>RIKEN-iTHEMS-Report-26</report-no>
+            <license>http://arxiv.org/licenses/nonexclusive-distrib/1.0/</license>
+            <abstract>Although Yang--Mills theories at $\theta$ and $\theta+2\pi$ are physically equivalent, their periodicity is realized nontrivially in the presence of a background field for the $1$-form center symmetry. The confining vacua at $\theta=0$ and $2\pi$ are therefore expected to have distinct symmetry-protected topological labels. We test this expectation in $SU(2)$ lattice Yang--Mills theory by measuring &#39;t~Hooft and dyonic Wilson--&#39;t~Hooft loops at $\theta=2\pi$. A $1$-form-covariant DBW2 flow makes the global reweighting factor numerically benign while retaining the physical non-integer topological charge in a defect ensemble. The dyonic loop exhibits a clear perimeter-law plateau on two lattice volumes. The direct &#39;t~Hooft-loop signal is noise-limited but has the magnitude and distance dependence expected for an area law. Taken together with the Wilson--&#39;t~Hooft classification, these results provide numerical evidence for the dyonic oblique-confinement pattern at $\theta=2\pi$. This talk is based on our recent paper (arXiv:2606.13428).</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2610.31395</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-ph</setSpec>
+            <setSpec>physics:hep-lat</setSpec>
+            <setSpec>physics:hep-th</setSpec>
+            <setSpec>physics:nucl-th</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2610.31395</id>
+        <submitter>Narmin Nasibova</submitter>
+            <version version="v1">
+                <date>Thu, 22 Oct 2026 14:58:42 GMT</date>
+                <size>740kb</size>
+            </version>
+        <title>$N \to \Delta$ Transition Form Factors in the Thermal AdS/QCD Soft-Wall Model with Modified Propagators</title>
+        <authors>Narmin Nasibova, Xerxes D. Arsiwalla, Shakir Nagiyev</authors>
+        <categories>hep-ph hep-lat hep-th nucl-th</categories>
+            <comments>39 pages</comments>
+            <license>http://creativecommons.org/licenses/by/4.0/</license>
+            <abstract>We investigate electromagnetic (EM) and axial vector (AV) form factors of the nucleon-Delta baryon transition within the thermal AdS/QCD soft-wall model. While the vector bulk-to-boundary propagator admits a well-behaved analytical solution, the transverse axial vector equation of motion involves the vacuum expectation value of the bifundamental scalar (generating chiral symmetry breaking). Due to this, the axial propagator diverges asymptotically, rendering it unsuitable for computing observables in the soft-wall model. To address this problem, we implement a regularization for the axial propagator in the form of a momentum-dependent cut-off, that identifies its correct physical regime. This is achieved via an interior constraint approach to the boundary-value problem, that determines the cut-off point. The consistency of this procedure is verified near the UV limit. As a proof of concept, we test this modified propagator (and also a parametrically deformed version of it) to estimate axial vector form factors of the $N \to \Delta$ transition, and find results moderately comparable with form factor profiles from experimental observations, lattice QCD, and other theoretical models. Equipped with this regularization, the thermal soft-wall model becomes a useful tool to probe thermal characteristics of QCD form factors. We demonstrate this for both, the EM and AV sectors of the $N \to \Delta$ transition.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2610.31597</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-lat</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2610.31597</id>
+        <submitter>Alex NieMiera</submitter>
+            <version version="v1">
+                <date>Thu, 22 Oct 2026 17:28:31 GMT</date>
+                <size>1573kb</size>
+            </version>
+        <title>Towards Systematic Control of the Nucleon Gluon PDF with the Pseudo-PDF Method</title>
+        <authors>Alex NieMiera, Kai Ebira, William Good, Huey-Wen Lin</authors>
+        <categories>hep-lat</categories>
+            <license>http://creativecommons.org/licenses/by/4.0/</license>
+            <abstract>We present updated lattice quantum chromodynamics (QCD) results for the unpolarized nucleon gluon parton distribution function (PDF) using the pseudo-PDF methodology. The calculation is performed at valence pion masses $M_\pi \approx 310$ and $690$ MeV on an $a \approx 0.06$ fm ensemble with $2+1+1$ flavors of highly improved staggered quarks (HISQ) generated by the MILC Collaboration. This lattice spacing is finer than those used in previous gluon pseudo-PDF studies, providing access to multiple short-distance separations and nucleon boost momenta as high as $4.4$ GeV. To control excited-state contamination and reduce model dependence, we employ the recently developed Lanczos method, finding good agreement with our previous two-state fit approach. Higher-twist contributions and discretization effects are accounted for through explicit parameterizations in fits to the renormalized short-distance matrix elements. Together, these advances represent important steps toward systematically controlled, high-precision extractions of the gluon PDF. The resulting PDFs exhibit no statistically significant dependence on the valence pion mass and indicate a strongly suppressed gluon distribution at large $x$, consistent with a subset of phenomenological PDF extractions. These results demonstrate progress toward providing systematically controlled lattice-QCD constraints for future global PDF analyses.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+                    <record>
+                <header>
+        <identifier>oai:arXiv.org:2610.31653</identifier>
+        <datestamp>2026-10-23</datestamp>
+            <setSpec>physics:hep-th</setSpec>
+            <setSpec>physics:cond-mat:str-el</setSpec>
+            <setSpec>physics:hep-lat</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2610.31653</id>
+        <submitter>David Tong</submitter>
+            <version version="v1">
+                <date>Thu, 22 Oct 2026 17:58:12 GMT</date>
+                <size>56kb</size>
+            </version>
+        <title>Onsager Algebras and Lattice Fermions</title>
+        <authors>Ioanna Kourkoulou and David Tong</authors>
+        <categories>hep-th cond-mat.str-el hep-lat</categories>
+            <comments>36 pages + appendices</comments>
+            <license>http://creativecommons.org/licenses/by/4.0/</license>
+            <abstract>We study the exact Onsager algebra of free lattice fermions in staggered, Wilson, and overlap incarnations, working in both Hamiltonian and Euclidean formulations in four spacetime dimensions. In each case, we show that the exact lattice algebra emanates the full chiral symmetry of the low-energy theory: if there are $N$ massless Dirac fermions in the continuum, the Onsager algebra reduces to a $U(2N)$ chiral symmetry. The details of which generators are quantised or ultra-local differ between formulations. There is also a trade-off between the locality of generators and the maximum compact subgroup of the Onsager algebra.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+    </ListRecords>
+</OAI-PMH>

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- TRIMMED by research script: first 2 of 716 records kept; everything else verbatim. -->
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2026-10-25T10:38:45Z</responseDate>
+                <request verb='ListRecords' resumptionToken='verb%3DListRecords%26metadataPrefix%3DarXivRaw%26from%3D2026-10-22%26until%3D2026-10-23%26set%3Dcs%253Acs%253ALG%26skip%3D44'>http://oaipmh.arxiv.org/oai</request>
+
+
+    <ListRecords>
+<record>
+                <header>
+        <identifier>oai:arXiv.org:1806.06100</identifier>
+        <datestamp>2026-10-22</datestamp>
+            <setSpec>cs:cs:LG</setSpec>
+            <setSpec>cs:cs:DS</setSpec>
+            <setSpec>stat:stat:ML</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>1806.06100</id>
+        <submitter>Uri Stemmer</submitter>
+            <version version="v1">
+                <date>Fri, 15 Jun 2018 19:36:35 GMT</date>
+                <size>31kb</size>
+            </version>
+            <version version="v2">
+                <date>Wed, 21 Oct 2026 16:54:34 GMT</date>
+                <size>30kb</size>
+            </version>
+        <title>The Limits of Post-Selection Generalization</title>
+        <authors>Kobbi Nissim and Adam Smith and Thomas Steinke and Uri Stemmer and Jonathan Ullman</authors>
+        <categories>cs.LG cs.DS stat.ML</categories>
+            <license>http://arxiv.org/licenses/nonexclusive-distrib/1.0/</license>
+            <abstract>While statistics and machine learning offer numerous methods for ensuring generalization, these methods often fail in the presence of adaptivity---the common practice in which the choice of analysis depends on previous interactions with the same dataset. A recent line of work has introduced powerful, general purpose algorithms that ensure post hoc generalization (also called robust or post-selection generalization), which says that, given the output of the algorithm, it is hard to find any statistic for which the data differs significantly from the population it came from.
+  In this work we show several limitations on the power of algorithms satisfying post hoc generalization. First, we show a tight lower bound on the error of any algorithm that satisfies post hoc generalization and answers adaptively chosen statistical queries, showing a strong barrier to progress in post selection data analysis. Second, we show that post hoc generalization is not closed under composition, despite many examples of such algorithms exhibiting strong composition properties.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+<record>
+                <header>
+        <identifier>oai:arXiv.org:2008.11573</identifier>
+        <datestamp>2026-10-22</datestamp>
+            <setSpec>cs:cs:LG</setSpec>
+            <setSpec>cs:cs:CL</setSpec>
+            <setSpec>stat:stat:ML</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>2008.11573</id>
+        <submitter>Selim Firat Yilmaz</submitter>
+            <version version="v1">
+                <date>Wed, 26 Aug 2020 14:16:02 GMT</date>
+                <size>544kb</size>
+                    <source_type>D</source_type>
+            </version>
+            <version version="v2">
+                <date>Wed, 21 Oct 2026 15:32:15 GMT</date>
+                <size>504kb</size>
+            </version>
+        <title>Multi-Label Sentiment Analysis on 100 Languages with Dynamic Weighting for Label Imbalance</title>
+        <authors>Selim F. Yilmaz, E. Batuhan Kaynak, Aykut Ko\c{c}, Hamdi Dibeklio\u{g}lu and Suleyman S. Kozat</authors>
+        <categories>cs.LG cs.CL stat.ML</categories>
+            <comments>12 pages, 4 figures, 4 tables. Accepted version of the article published in IEEE Transactions on Neural Networks and Learning Systems</comments>
+            <journal-ref>IEEE Transactions on Neural Networks and Learning Systems, vol. 34, no. 1, pp. 331-343, Jan. 2023</journal-ref>
+            <doi>10.1109/TNNLS.2021.3094304</doi>
+            <license>http://arxiv.org/licenses/nonexclusive-distrib/1.0/</license>
+            <abstract>We investigate cross-lingual sentiment analysis, which has attracted significant attention due to its applications in various areas including market research, politics and social sciences. In particular, we introduce a sentiment analysis framework in multi-label setting as it obeys Plutchik&#39;s wheel of emotions. We introduce a novel dynamic weighting method that balances the contribution from each class during training, unlike previous static weighting methods that assign non-changing weights based on their class frequency. Moreover, we adapt the focal loss that favors harder instances from single-label object recognition literature to our multi-label setting. Furthermore, we derive a method to choose optimal class-specific thresholds that maximize the macro-f1 score in linear time complexity. Through an extensive set of experiments, we show that our method obtains the state-of-the-art performance in 7 of 9 metrics in 3 different languages using a single model compared to the common baselines and the best-performing methods in the SemEval competition. We publicly share our code for our model, which can perform sentiment analysis in 100 languages, to facilitate further research.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+
+                    <resumptionToken/>
+
+    </ListRecords>
+</OAI-PMH>

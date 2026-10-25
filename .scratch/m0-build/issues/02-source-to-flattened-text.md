@@ -1,7 +1,7 @@
 # Source to flattened text
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 01
 
 ## Goal

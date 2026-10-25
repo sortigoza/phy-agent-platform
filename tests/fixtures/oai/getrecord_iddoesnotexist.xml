@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+    <responseDate>2026-10-25T15:50:00Z</responseDate>
+    <request verb="GetRecord" identifier="oai:arXiv.org:9999.99999" metadataPrefix="arXivRaw">http://oaipmh.arxiv.org/oai</request>
+    <error code='idDoesNotExist'>The value of the identifier argument is unknown or illegal in this repository.</error>
+</OAI-PMH>

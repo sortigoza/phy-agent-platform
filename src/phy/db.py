@@ -13,6 +13,8 @@ from pathlib import Path
 
 import structlog
 
+from phy.arxiv import ArxivRecord
+
 log = structlog.get_logger()
 
 MIGRATIONS = files("phy") / "migrations"
@@ -65,5 +67,77 @@ def set_state(conn: sqlite3.Connection, key: str, value: str) -> None:
         conn.execute(
             "INSERT INTO state (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT (key)"
             " DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-            (key, value, datetime.now(UTC).isoformat(timespec="seconds")),
+            (key, value, _now()),
         )
+
+
+def upsert_paper(conn: sqlite3.Connection, record: ArxivRecord) -> None:
+    """Upsert a Paper and its versions from arXivRaw, as Watch does. A version already known
+    keeps its first datestamp and its source columns."""
+    now = _now()
+    with conn:
+        conn.execute(
+            "INSERT INTO papers (arxiv_id, latest_version, title, authors, abstract, categories,"
+            " primary_category, license, sets, first_seen_at, updated_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (arxiv_id) DO UPDATE SET"
+            " latest_version = excluded.latest_version, title = excluded.title,"
+            " authors = excluded.authors, abstract = excluded.abstract,"
+            " categories = excluded.categories, primary_category = excluded.primary_category,"
+            " license = excluded.license, sets = excluded.sets, updated_at = excluded.updated_at",
+            (
+                record.arxiv_id,
+                record.latest_version,
+                record.title,
+                record.authors,
+                record.abstract,
+                " ".join(record.categories),
+                record.primary_category,
+                record.license,
+                " ".join(record.sets),
+                now,
+                now,
+            ),
+        )
+        conn.executemany(
+            "INSERT INTO paper_versions (arxiv_id, version, submitted_at, first_seen_datestamp)"
+            " VALUES (?, ?, ?, ?) ON CONFLICT (arxiv_id, version) DO NOTHING",
+            [
+                (
+                    record.arxiv_id,
+                    v.number,
+                    v.submitted_at.isoformat(),
+                    record.datestamp.isoformat(),
+                )
+                for v in record.versions
+            ],
+        )
+
+
+def get_paper(conn: sqlite3.Connection, arxiv_id: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM papers WHERE arxiv_id = ?", (arxiv_id,)).fetchone()
+
+
+def get_paper_version(conn: sqlite3.Connection, arxiv_id: str, version: int) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM paper_versions WHERE arxiv_id = ? AND version = ?", (arxiv_id, version)
+    ).fetchone()
+
+
+def record_source(
+    conn: sqlite3.Connection,
+    arxiv_id: str,
+    version: int,
+    source_type: str,
+    local_path: str,
+    sha256: str,
+) -> None:
+    with conn:
+        conn.execute(
+            "UPDATE paper_versions SET source_type = ?, local_path = ?, sha256 = ?, fetched_at = ?"
+            " WHERE arxiv_id = ? AND version = ?",
+            (source_type, local_path, sha256, _now(), arxiv_id, version),
+        )
+
+
+def _now() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")

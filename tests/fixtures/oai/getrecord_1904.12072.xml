@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2026-10-25T15:48:35Z</responseDate>
+                <request verb="GetRecord" identifier="oai:arXiv.org:1904.12072" metadataPrefix="arXivRaw">http://oaipmh.arxiv.org/oai</request>
+
+
+    <GetRecord>
+                <record>
+                <header>
+        <identifier>oai:arXiv.org:1904.12072</identifier>
+        <datestamp>2019-09-10</datestamp>
+            <setSpec>physics:hep-lat</setSpec>
+            <setSpec>physics:cond-mat:dis-nn</setSpec>
+            <setSpec>physics:cond-mat:stat-mech</setSpec>
+            <setSpec>cs:cs:LG</setSpec>
+    </header>
+
+            <metadata>
+                        <arXivRaw xmlns="http://arxiv.org/OAI/arXivRaw/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://arxiv.org/OAI/arXivRaw/ https://oaipmh.arxiv.org/OAI/arXivRaw.xsd">
+        <id>1904.12072</id>
+        <submitter>Gurtej Kanwar</submitter>
+            <version version="v1">
+                <date>Fri, 26 Apr 2019 23:30:09 GMT</date>
+                <size>506kb</size>
+                    <source_type>D</source_type>
+            </version>
+            <version version="v2">
+                <date>Wed, 31 Jul 2019 14:44:25 GMT</date>
+                <size>338kb</size>
+                    <source_type>D</source_type>
+            </version>
+            <version version="v3">
+                <date>Mon, 09 Sep 2019 17:53:37 GMT</date>
+                <size>338kb</size>
+                    <source_type>D</source_type>
+            </version>
+        <title>Flow-based generative models for Markov chain Monte Carlo in lattice field theory</title>
+        <authors>M. S. Albergo, G. Kanwar, P. E. Shanahan</authors>
+        <categories>hep-lat cond-mat.dis-nn cond-mat.stat-mech cs.LG</categories>
+            <comments>13 pages, 7 figures; corrected normalization conventions in eqns. 20 and 23</comments>
+            <report-no>MIT-CTP/5114</report-no>
+            <journal-ref>Phys. Rev. D 100, 034515 (2019)</journal-ref>
+            <doi>10.1103/PhysRevD.100.034515</doi>
+            <license>http://arxiv.org/licenses/nonexclusive-distrib/1.0/</license>
+            <abstract>A Markov chain update scheme using a machine-learned flow-based generative model is proposed for Monte Carlo sampling in lattice field theories. The generative model may be optimized (trained) to produce samples from a distribution approximating the desired Boltzmann distribution determined by the lattice action of the theory being studied. Training the model systematically improves autocorrelation times in the Markov chain, even in regions of parameter space where standard Markov chain Monte Carlo algorithms exhibit critical slowing down in producing decorrelated updates. Moreover, the model may be trained without existing samples from the desired distribution. The algorithm is compared with HMC and local Metropolis sampling for $\phi^4$ theory in two dimensions.</abstract>
+    </arXivRaw>
+
+            </metadata>
+        </record>
+
+    </GetRecord>
+</OAI-PMH>
