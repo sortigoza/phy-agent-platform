@@ -216,7 +216,8 @@ Card fields are stored only inside `card_json` and queried with SQLite JSON func
 - Papers are upserted on `arxiv_id`, and versions on (arxiv_id, version).
 - The `arXivRaw` version history tells three cases apart: a new Paper, a new version, and a metadata-only change. Metadata-only changes update `papers` and create no work.
 
-**Advancing the high-water mark.** The mark moves to the first page's `responseDate`, and only after all sets have completed. Otherwise it stays where it was.
+**Advancing the high-water mark.** The mark moves to the first page's `responseDate` (the earliest across sets, as a date), and only after all sets have completed. Otherwise it stays where it was, and the run fails; an expired resumption token fails it too, and the next run starts the set again from the mark.
+- It never moves backwards. `phy watch --since DATE` re-harvests from `DATE`; it moves the mark only when `DATE` is on or before it, since a later `DATE` would leave a gap. `phy watch --reset` clears the mark, so that run backfills like a first run.
 - Because OAI-PMH dates are whole days, the `from` day is always fetched again. That overlap is free, since upserts are idempotent.
 - Watch never takes the mark from `Identify`, which can return a cached response.
 - arXiv's CDN caches list responses for up to about 1 h (errors until UTC midnight), so a `responseDate` can be stale. It is never later than the data it covers, so the mark stays safe.

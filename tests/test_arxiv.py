@@ -214,3 +214,30 @@ def test_get_record_for_an_unknown_id_raises(paths):
         )
         with pytest.raises(IdDoesNotExist):
             client(paths, FakeTime()).get_record("9999.99999")
+
+
+def test_list_records_follows_the_resumption_token_to_the_empty_one(paths):
+    def oai(request):
+        params = dict(request.url.params)
+        if "resumptionToken" in params:
+            assert set(params) == {"verb", "resumptionToken"}
+            return httpx.Response(
+                200, content=fixture("listrecords_cs-LG_page3_trimmed_final-empty-token.xml")
+            )
+        return httpx.Response(
+            200, content=fixture("listrecords_cs-LG_page2_trimmed_with-token.xml")
+        )
+
+    with respx.mock() as router:
+        route = router.get(OAI_URL).mock(side_effect=oai)
+        pages = list(client(paths, FakeTime()).list_records("cs:cs:LG", date(2026, 10, 19)))
+
+    assert dict(route.calls[0].request.url.params) == {
+        "verb": "ListRecords",
+        "metadataPrefix": "arXivRaw",
+        "set": "cs:cs:LG",
+        "from": "2026-10-19",
+    }
+    assert route.calls[1].request.url.params["resumptionToken"].startswith("verb%3DListRecords")
+    assert [len(p.records) for p in pages] == [2, 2]
+    assert pages[0].response_date == datetime(2026, 10, 25, 10, 38, 29, tzinfo=UTC)
