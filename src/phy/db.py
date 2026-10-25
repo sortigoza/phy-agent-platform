@@ -10,6 +10,7 @@ import sqlite3
 from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
+from typing import Literal
 
 import structlog
 
@@ -71,32 +72,75 @@ def set_state(conn: sqlite3.Connection, key: str, value: str) -> None:
         )
 
 
-def upsert_paper(conn: sqlite3.Connection, record: ArxivRecord) -> None:
-    """Upsert a Paper and its versions from arXivRaw, as Watch does. A version already known
-    keeps its first datestamp and its source columns."""
-    now = _now()
+def delete_state(conn: sqlite3.Connection, key: str) -> None:
     with conn:
+        conn.execute("DELETE FROM state WHERE key = ?", (key,))
+
+
+def record_run(
+    conn: sqlite3.Connection,
+    run_id: str,
+    stage: str,
+    status: str,
+    started_at: str,
+    error: str | None = None,
+) -> None:
+    """The `runs` row of a Stage run with no model call (`ok` or `failed`)."""
+    with conn:
+        conn.execute(
+            "INSERT INTO runs (id, stage, status, error, started_at, ended_at)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (run_id, stage, status, error, started_at, _now()),
+        )
+
+
+Upserted = Literal["new_paper", "new_version", "metadata_only", "unchanged"]
+PAPER_METADATA = ["title", "authors", "abstract", "categories", "primary_category", "license"]
+
+
+def upsert_paper(conn: sqlite3.Connection, record: ArxivRecord) -> Upserted:
+    """Upsert a Paper and its versions from arXivRaw, as Watch does, and say which case it was.
+    `sets` accumulates the sets a Paper was seen in. A version already known keeps its first
+    datestamp and its source columns."""
+    now = _now()
+    metadata = {
+        "title": record.title,
+        "authors": record.authors,
+        "abstract": record.abstract,
+        "categories": " ".join(record.categories),
+        "primary_category": record.primary_category,
+        "license": record.license,
+    }
+    with conn:
+        paper = get_paper(conn, record.arxiv_id)
+        known = {
+            row["version"]
+            for row in conn.execute(
+                "SELECT version FROM paper_versions WHERE arxiv_id = ?", (record.arxiv_id,)
+            )
+        }
+        sets = paper["sets"].split() if paper else []
+        sets += [s for s in record.sets if s not in sets]
+        latest = max(record.latest_version, paper["latest_version"] if paper else 0)
+        row = {**metadata, "latest_version": latest, "sets": " ".join(sets)}
+        if paper is None:
+            outcome = "new_paper"
+        elif {v.number for v in record.versions} - known:
+            outcome = "new_version"
+        elif any(paper[k] != v for k, v in row.items()):
+            outcome = "metadata_only"
+        else:
+            return "unchanged"
         conn.execute(
             "INSERT INTO papers (arxiv_id, latest_version, title, authors, abstract, categories,"
             " primary_category, license, sets, first_seen_at, updated_at)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (arxiv_id) DO UPDATE SET"
+            " VALUES (:arxiv_id, :latest_version, :title, :authors, :abstract, :categories,"
+            " :primary_category, :license, :sets, :now, :now) ON CONFLICT (arxiv_id) DO UPDATE SET"
             " latest_version = excluded.latest_version, title = excluded.title,"
             " authors = excluded.authors, abstract = excluded.abstract,"
             " categories = excluded.categories, primary_category = excluded.primary_category,"
             " license = excluded.license, sets = excluded.sets, updated_at = excluded.updated_at",
-            (
-                record.arxiv_id,
-                record.latest_version,
-                record.title,
-                record.authors,
-                record.abstract,
-                " ".join(record.categories),
-                record.primary_category,
-                record.license,
-                " ".join(record.sets),
-                now,
-                now,
-            ),
+            {**row, "arxiv_id": record.arxiv_id, "now": now},
         )
         conn.executemany(
             "INSERT INTO paper_versions (arxiv_id, version, submitted_at, first_seen_datestamp)"
@@ -111,6 +155,20 @@ def upsert_paper(conn: sqlite3.Connection, record: ArxivRecord) -> None:
                 for v in record.versions
             ],
         )
+    return outcome
+
+
+def mark_cards_stale(conn: sqlite3.Connection, arxiv_id: str, latest_version: int) -> int:
+    """Make the Cards of older versions of a Paper Stale; returns how many changed."""
+    # `cards` arrives with the Read call (migration 003_cards); before it there is nothing to do.
+    if not conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'cards'").fetchone():
+        return 0
+    with conn:
+        return conn.execute(
+            "UPDATE cards SET status = 'stale'"
+            " WHERE arxiv_id = ? AND version < ? AND status != 'stale'",
+            (arxiv_id, latest_version),
+        ).rowcount
 
 
 def get_paper(conn: sqlite3.Connection, arxiv_id: str) -> sqlite3.Row | None:

@@ -11,7 +11,7 @@ one `<record>` into an `ArxivRecord`; Read and Watch upsert from it the same way
 """
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from email.utils import parsedate_to_datetime
@@ -164,6 +164,22 @@ class Arxiv:
         if len(page.records) != 1:
             raise OaiError("unexpectedResponse", f"GetRecord returned {len(page.records)} records")
         return page.records[0]
+
+    def list_records(self, set_spec: str, from_: date) -> Iterator[OaiPage]:
+        """Every page of one set from `from_` (inclusive, no `until`), following resumption
+        tokens to the end. Tokens expire at the next UTC midnight, so they are never stored."""
+        params = {
+            "verb": "ListRecords",
+            "metadataPrefix": "arXivRaw",
+            "set": set_spec,
+            "from": from_.isoformat(),
+        }
+        while True:
+            page = self.oai(params)
+            yield page
+            if page.token is None:
+                return
+            params = {"verb": "ListRecords", "resumptionToken": page.token}
 
     def get_source(self, arxiv_id: str, version: int) -> bytes:
         return self.get(SRC_URL.format(arxiv_id=arxiv_id, version=version)).content

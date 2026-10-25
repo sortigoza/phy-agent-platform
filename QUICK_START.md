@@ -58,6 +58,7 @@ Check that the Card is right, the quotes expand, and the unsupported fields are 
 
 ```sh
 uv run phy daily                     # Watch (backfills watch.backfill_days) → Filter → Read → Verify
+uv run phy watch                     # or Watch alone: harvest every set since the mark
 uv run phy status                    # high-water mark, funnel counts, week's spend, last failures
 ```
 

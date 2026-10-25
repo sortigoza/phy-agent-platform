@@ -2,6 +2,7 @@
 
 import re
 import tarfile
+from datetime import datetime
 from typing import Annotated
 
 import httpx
@@ -11,6 +12,7 @@ import typer
 import phy
 from phy import init as phy_init
 from phy import log as phy_log
+from phy import watch as watch_stage
 from phy.arxiv import ArxivUnavailable, OaiError
 from phy.config import ConfigError, resolve_paths
 from phy.ctx import Ctx
@@ -23,6 +25,7 @@ from phy.read.source import UnknownSourceFormat
 log = structlog.get_logger()
 
 ARXIV_ID = re.compile(r"\d{4}\.\d{4,5}")
+WATCH_ERRORS = (ConfigError, ArxivUnavailable, OaiError, httpx.HTTPError)
 READ_ERRORS = (
     ConfigError,
     AuthError,
@@ -109,3 +112,33 @@ def read(
             raise typer.Exit(1) from None
     typer.echo(f"{prepared.flattened}")
     typer.echo(f"{prepared.chars:,} chars, {prepared.tokens:,} tokens")
+
+
+@app.command()
+def watch(
+    since: Annotated[
+        datetime | None,
+        typer.Option(
+            "--since",
+            formats=["%Y-%m-%d"],
+            help="Harvest from this day (YYYY-MM-DD); the mark never moves backwards.",
+        ),
+    ] = None,
+    reset: Annotated[
+        bool,
+        typer.Option(
+            "--reset", help="Clear the mark first, so the run backfills watch.backfill_days."
+        ),
+    ] = False,
+) -> None:
+    """Harvest every configured set since the high-water mark."""
+    if since and reset:
+        raise typer.BadParameter("--since and --reset cannot be combined")
+    paths = resolve_paths()
+    with phy_lock(paths):
+        try:
+            mark = watch_stage.run(Ctx.load(paths), since=since and since.date(), reset=reset)
+        except WATCH_ERRORS as e:
+            log.error("watch.failed", error=str(e))
+            raise typer.Exit(1) from None
+    typer.echo(f"mark: {mark.isoformat() if mark else 'none'}")
