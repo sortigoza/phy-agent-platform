@@ -18,8 +18,8 @@ from typing import Literal
 
 import structlog
 
-from phy import db, llm
-from phy.config import Prefilter, Questions
+from phy import db, llm, prompts
+from phy.config import ConfigError, Prefilter, Questions
 from phy.ctx import Ctx
 from phy.tracer import Run
 
@@ -62,6 +62,10 @@ def _any_match(terms: list[str], text: str) -> bool:
 
 class UnknownPaper(Exception):
     pass
+
+
+# What a Filter run fails with, logged without a traceback; a failed call fails only its Paper.
+ERRORS = (ConfigError, llm.AuthError, prompts.PromptError, UnknownPaper)
 
 
 @dataclass

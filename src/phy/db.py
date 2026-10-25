@@ -7,7 +7,7 @@ down-migrations.
 
 import re
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from importlib.resources import files
 from pathlib import Path
 from typing import Literal
@@ -382,6 +382,84 @@ def write_screening(
                 _now(),
             ),
         )
+
+
+def uncarded_screened_in(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Every Screened-in latest Paper version without a Card, as (arxiv_id, version, best_score)."""
+    return conn.execute(
+        "SELECT s.arxiv_id, s.version, s.best_score FROM screenings s"
+        " JOIN papers p ON p.arxiv_id = s.arxiv_id AND p.latest_version = s.version"
+        " LEFT JOIN cards c ON c.arxiv_id = s.arxiv_id AND c.version = s.version"
+        " WHERE s.screened_in AND c.id IS NULL ORDER BY s.arxiv_id"
+    ).fetchall()
+
+
+def stale_cards(conn: sqlite3.Connection, *, relevant_only: bool) -> list[sqlite3.Row]:
+    """The latest version of every Paper whose newest Card is Stale, as (arxiv_id, version,
+    best_score); with `relevant_only`, only when that Card's latest Review is yes or partly."""
+    return conn.execute(
+        "SELECT p.arxiv_id, p.latest_version AS version, s.best_score FROM papers p"
+        " JOIN cards c ON c.arxiv_id = p.arxiv_id AND c.version = ("
+        "   SELECT max(version) FROM cards WHERE arxiv_id = p.arxiv_id)"
+        " LEFT JOIN screenings s ON s.arxiv_id = p.arxiv_id AND s.version = p.latest_version"
+        " WHERE c.status = 'stale' AND c.version < p.latest_version AND (:all OR ("
+        "   SELECT relevance FROM reviews WHERE card_id = c.id"
+        "   ORDER BY created_at DESC, id DESC LIMIT 1) IN ('yes', 'partly'))"
+        " ORDER BY p.arxiv_id",
+        {"all": not relevant_only},
+    ).fetchall()
+
+
+def cards_read_since(conn: sqlite3.Connection, day: date) -> list[sqlite3.Row]:
+    """Cards per UTC day of the Read run that wrote them, from `day` on, as (day, cards)."""
+    return conn.execute(
+        "SELECT date(r.started_at) AS day, count(*) AS cards FROM cards c"
+        " JOIN runs r ON r.id = c.run_id WHERE r.started_at >= ? GROUP BY day",
+        (day.isoformat(),),
+    ).fetchall()
+
+
+def spend_since(conn: sqlite3.Connection, day: date) -> float:
+    """What every run since the start of `day` (UTC) cost."""
+    return conn.execute(
+        "SELECT coalesce(sum(cost_usd), 0) FROM runs WHERE started_at >= ?", (day.isoformat(),)
+    ).fetchone()[0]
+
+
+def funnel(conn: sqlite3.Connection, since: str) -> dict[str, int]:
+    """What happened at each step from `since` on (SPEC §9 funnel)."""
+    row = conn.execute(
+        "SELECT"
+        " (SELECT count(*) FROM paper_versions WHERE first_seen_datestamp > date(:since))"
+        "   AS harvested,"
+        " (SELECT count(*) FROM screenings s JOIN runs r ON r.id = s.run_id"
+        "   WHERE s.prefilter IN ('pass', 'skipped') AND r.started_at >= :since) AS candidates,"
+        " (SELECT count(*) FROM screenings s JOIN runs r ON r.id = s.run_id"
+        "   WHERE s.screened_in AND r.started_at >= :since) AS screened_in,"
+        " (SELECT count(*) FROM cards c JOIN runs r ON r.id = c.run_id"
+        "   WHERE r.started_at >= :since) AS carded,"
+        " (SELECT count(*) FROM cards c JOIN runs r ON r.id = c.run_id"
+        "   WHERE c.status IN ('verified', 'reviewed', 'stale') AND r.started_at >= :since)"
+        "   AS verified,"
+        " (SELECT count(*) FROM reviews WHERE created_at >= :since) AS reviewed,"
+        " (SELECT count(*) FROM reviews WHERE relevance IN ('yes', 'partly')"
+        "   AND created_at >= :since) AS relevant,"
+        " (SELECT count(*) FROM reviews WHERE deep_read AND created_at >= :since) AS deep_read",
+        {"since": since},
+    ).fetchone()
+    return dict(row)
+
+
+def unretried_failures(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Failed runs with no later ok run of the same Stage (and Paper, for per-Paper runs),
+    oldest first."""
+    return conn.execute(
+        "SELECT f.id, f.stage, f.arxiv_id, f.error, f.started_at FROM runs f"
+        " WHERE f.status = 'failed' AND NOT EXISTS ("
+        "   SELECT 1 FROM runs r WHERE r.stage = f.stage AND r.arxiv_id IS f.arxiv_id"
+        "   AND r.status = 'ok' AND r.started_at > f.started_at)"
+        " ORDER BY f.started_at, f.id"
+    ).fetchall()
 
 
 def _now() -> str:

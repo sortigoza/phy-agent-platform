@@ -9,14 +9,18 @@ again, a re-run, or a `--since` window costs nothing but requests.
 from collections import Counter
 from datetime import UTC, date, datetime, timedelta
 
+import httpx
 import structlog
 
 from phy import db
-from phy.arxiv import Arxiv
+from phy.arxiv import Arxiv, ArxivUnavailable, OaiError
+from phy.config import ConfigError
 from phy.ctx import Ctx
 
 log = structlog.get_logger()
 
+# What a Watch run fails with, logged without a traceback; anything else is a bug.
+ERRORS = (ConfigError, ArxivUnavailable, OaiError, httpx.HTTPError)
 HWM = "watch.hwm"
 LAST_SUCCESS = "watch.last_success_at"
 COUNTED_AS = {

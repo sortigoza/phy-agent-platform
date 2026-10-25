@@ -1,27 +1,54 @@
 """The Read Stage: fetch a Paper version's source, flatten it, and make one model call that
 returns a draft Card.
 
-For a Paper not yet in `papers`, Read calls `GetRecord` and upserts it exactly as Watch would,
-then takes the latest version. It bypasses Filter and writes no `screenings` row. A Paper
-version that already has a Card is left alone unless `force` is set.
+`run_selected()` is the Stage run: selection (`phy.read.select`), then one Read per pick, each
+its own run (`<run_id>-<arxiv_id>v<version>`), so one Paper failing doesn't stop the others.
+The Stage run gets a `runs` row of its own, as Filter's does.
+
+`run()` reads one Paper (`read --paper`). For a Paper not yet in `papers`, it calls `GetRecord`
+and upserts it exactly as Watch would, then takes the latest version. It bypasses Filter and
+writes no `screenings` row. A Paper version that already has a Card is left alone unless `force`
+is set. A Read that fails before its model call still leaves a failed `runs` row.
 """
 
 import hashlib
 import shutil
-from dataclasses import dataclass
+import tarfile
+from dataclasses import dataclass, field, replace
+from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import get_args
 
+import httpx
 import structlog
 
 from phy import db, llm
-from phy.arxiv import Arxiv
+from phy.arxiv import Arxiv, ArxivUnavailable, OaiError
 from phy.card import SCHEMA_VERSION
+from phy.config import ConfigError
 from phy.ctx import Ctx
-from phy.read.flatten import flatten, pdf_text
-from phy.read.source import SourceFormat, detect, unpack
+from phy.log import log_failure
+from phy.prompts import PromptError
+from phy.read.flatten import NoMainFile, flatten, pdf_text
+from phy.read.select import Reason, select
+from phy.read.source import SourceFormat, UnknownSourceFormat, detect, unpack
 from phy.tracer import Run
 
 log = structlog.get_logger()
+
+# What a Read fails with, logged without a traceback; anything else is a bug.
+ERRORS = (
+    ConfigError,
+    llm.AuthError,
+    llm.ApiError,
+    PromptError,
+    ArxivUnavailable,
+    OaiError,
+    httpx.HTTPError,
+    UnknownSourceFormat,
+    tarfile.TarError,
+    NoMainFile,
+)
 
 
 @dataclass
@@ -48,10 +75,62 @@ class AlreadyCarded:
     card_id: int
 
 
+@dataclass
+class Selected:
+    carded: list[Carded] = field(default_factory=list)
+    failed: list[str] = field(default_factory=list)  # "<arxiv_id>v<n>: <error>"
+
+
+def run_selected(ctx: Ctx, today: date | None = None) -> Selected:
+    """Select today's Paper versions and Read each one."""
+    with structlog.contextvars.bound_contextvars(run_id=ctx.run_id, stage="read"):
+        started_at = datetime.now(UTC).isoformat(timespec="seconds")
+        try:
+            picks = select(ctx, today)
+        except Exception as e:
+            db.record_run(ctx.db, ctx.run_id, "read", "failed", started_at, error=str(e))
+            raise
+        db.record_run(ctx.db, ctx.run_id, "read", "ok", started_at)
+        selected = Selected()
+        for pick in picks:
+            paper_ctx = replace(ctx, run_id=f"{ctx.run_id}-{pick.arxiv_id}v{pick.version}")
+            try:
+                outcome = run(paper_ctx, pick.arxiv_id)
+            except Exception as e:
+                with structlog.contextvars.bound_contextvars(
+                    run_id=paper_ctx.run_id, arxiv_id=pick.arxiv_id, version=pick.version
+                ):
+                    log_failure(log, "read.paper_failed", e, ERRORS)
+                selected.failed.append(f"{pick.arxiv_id}v{pick.version}: {e}")
+                continue
+            if isinstance(outcome, Carded):
+                selected.carded.append(outcome)
+        log.info(
+            "read.finished",
+            **{reason: sum(p.reason == reason for p in picks) for reason in get_args(Reason)},
+            carded=len(selected.carded),
+            failed=len(selected.failed),
+        )
+    return selected
+
+
 def run(
     ctx: Ctx, arxiv_id: str, *, dry_run: bool = False, force: bool = False
 ) -> Prepared | Carded | AlreadyCarded:
     """`dry_run` stops after `flattened.txt` and counts its tokens instead of calling Read."""
+    started_at = datetime.now(UTC).isoformat(timespec="seconds")
+    try:
+        return _read(ctx, arxiv_id, dry_run=dry_run, force=force)
+    except Exception as e:
+        # A failed model call has its row from the Tracer already.
+        if not dry_run and db.get_run(ctx.db, ctx.run_id) is None:
+            db.record_run(ctx.db, ctx.run_id, "read", "failed", started_at, str(e), arxiv_id)
+        raise
+
+
+def _read(
+    ctx: Ctx, arxiv_id: str, *, dry_run: bool, force: bool
+) -> Prepared | Carded | AlreadyCarded:
     config = ctx.config.read
     stage_run = Run(
         id=ctx.run_id,
@@ -74,7 +153,7 @@ def run(
                 text = _flatten(ctx, arxiv_id, version, data, fmt)
                 path = ctx.paths.flattened(arxiv_id, version)
                 path.write_text(text)
-                log.info("read.flattened", chars=len(text), format=fmt, fetched=fetched)
+                log.debug("read.flattened", chars=len(text), format=fmt, fetched=fetched)
         if dry_run:
             tokens = llm.count_tokens(config.model, text)
             return Prepared(

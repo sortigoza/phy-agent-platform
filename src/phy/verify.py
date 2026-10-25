@@ -38,6 +38,7 @@ from phy.card import (
     VerifiedLimitation,
     VerifiedQuote,
 )
+from phy.config import ConfigError
 from phy.ctx import Ctx
 
 log = structlog.get_logger()
@@ -200,6 +201,10 @@ def _sig(digits: str) -> int:
 
 class NoCard(Exception):
     """`verify --paper` named a Paper that has no Card."""
+
+
+# What a Verify run fails with, logged without a traceback; a Card that fails fails only itself.
+ERRORS = (ConfigError, NoCard)
 
 
 @dataclass
