@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "_macros.html" as m %}
+{% import "_macros.html" as m with context %}
 {# B · Split pane: scan every field on the left; the focused field's evidence, figures and Flag on the right. #}
 {% block body %}
 <div class="verdictbar">{{ m.verdict(card) }}</div>
@@ -30,7 +30,7 @@
             hx-on::after-request="this.reset()">
         <input type="hidden" name="field_path" value="{{ f.path }}">
         {% for k, label in flag_kinds.items() %}
-          <label><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if loop.first }}><kbd>{{ loop.index }}</kbd> {{ label }}</label>
+          <label title="{{ help[k] }}"><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if loop.first }}><kbd>{{ loop.index }}</kbd> {{ label }}</label>
         {% endfor %}
         <input type="text" name="note" placeholder="note (optional), Enter saves">
       </form>

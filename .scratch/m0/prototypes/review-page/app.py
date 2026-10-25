@@ -40,6 +40,36 @@ FLAG_KINDS = {
     "should_be_opinion": "Should be opinion",
 }
 
+# Hover help: one dict, so every page explains a thing the same way (a page convention).
+HELP = {
+    "stale": "A newer version of this paper arrived after the Card was made. If you rate it yes or partly, it is re-Read.",
+    "num": "Numbers in a value that Verify could not find in that field's own quotes, or anywhere in the paper.",
+    "supported": "Fields whose quotes were found word for word in the paper, and the value is stated in them.",
+    "inferred": "The quotes were found, but the value is the agent's conclusion from them (combined, converted, or reasoned), not stated outright. Check the reasoning.",
+    "unsupported": "Verify could not find the quote in the paper, so nothing backs this value. Treat it as unverified.",
+    "numq": "This number is in the value but not in the field's own quotes. It may come from elsewhere in the paper, or be invented.",
+    "nump": "This number appears nowhere in the paper: likely invented.",
+    "timer": "Time on this Card. The target is about 4 minutes; amber at 4:00, red at 5:00. Saved with your Review.",
+    "flag": "Flag this field: say what is wrong with it. Flags improve the prompts; Cards are never hand-edited. Key: f",
+    "wrong_value": "The value misstates the paper.",
+    "quote_doesnt_support": "The quote is real, but it does not back up the value.",
+    "missing": "Something important is left out of this field.",
+    "should_be_opinion": "This is the agent's judgement presented as the paper's claim.",
+    "quotes": "The exact passages from the paper (raw LaTeX, rendered) that back this value. Key: o",
+    "loc": "Where Verify found the quote in the paper.",
+    "also": "The same text appears this many more times in the paper, so the location shown may not be the only one.",
+    "notfound": "Verify searched the paper's text and did not find this quote.",
+    "opinion": "The agent's own judgement, not the paper's claims. It has no quotes by design.",
+    "relevance": "Is this paper relevant to your research questions? Used to measure the Filter's precision. Keys: y / p / n",
+    "deep_read": "Mark it for a full read later. The agent's suggestion is shown alongside. Key: d",
+    "save": "Save your Review (relevance, deep read, note, time) and move to the next Card. Key: s",
+    "secnav": "Jump to a section. Keys: [ and ]",
+    "secuns": "Unsupported fields in this section.",
+    "norender": "This figure is in a format the page can't display (EPS). Open the paper to see it.",
+    "ref": "A cross-reference or citation in the paper, shown by its LaTeX key.",
+    "help": "Press ? for the keyboard shortcuts.",
+}
+
 # --- in-memory state ----------------------------------------------------------
 
 STATE = {"flags": [], "reviews": []}
@@ -71,8 +101,8 @@ def clean_text(s: str) -> str:
     s = re.sub(r"\{\\bf\s+([^{}]*)\}", r"<b>\1</b>", s)
     s = re.sub(r"\\(?:textit|emph)\{([^{}]*)\}", r"<i>\1</i>", s)
     s = re.sub(r"\\textbf\{([^{}]*)\}", r"<b>\1</b>", s)
-    s = re.sub(r"\\(?:eq)?ref\{([^{}]*)\}", r'<span class="ref">\1</span>', s)
-    s = re.sub(r"\\cite[pt]?\{([^{}]*)\}", r'<span class="ref">cite</span>', s)
+    s = re.sub(r"\\(?:eq)?ref\{([^{}]*)\}", rf'<span class="ref" title="{HELP["ref"]}">\1</span>', s)
+    s = re.sub(r"\\cite[pt]?\{([^{}]*)\}", rf'<span class="ref" title="{HELP["ref"]}">cite</span>', s)
     s = s.replace("~", " ").replace("\\%", "%").replace("---", "—").replace("--", "–")
     s = s.replace("``", "“").replace("''", "”")
     return s
@@ -261,7 +291,7 @@ def review(request: Request, variant: str = "A", demo: int = 1):
     return T.TemplateResponse(request, f"variant_{variant.lower()}.html", {
         "card": card, "meta": meta, "fields": fields, "sections": sections(fields), "counts": counts,
         "n_numbers": sum(len(v) for v in meta["number_flags"].values()),
-        "flag_kinds": FLAG_KINDS, "macros": json.dumps(MACROS), "variant": variant,
+        "flag_kinds": FLAG_KINDS, "help": HELP, "macros": json.dumps(MACROS), "variant": variant,
         "variants": VARIANTS, "demo": demo, "flags_by_path": flags_by_path(), "state": state_json(),
     })
 

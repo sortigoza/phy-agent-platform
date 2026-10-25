@@ -1,18 +1,18 @@
 {% macro fid(f) %}f-{{ f.path|replace('[','-')|replace(']','')|replace('.','-') }}{% endmacro %}
 
 {% macro support_tag(f) %}<span class="tags">
-  {% if f.support == 'inferred' %}<span class="tag inf">inferred</span>
-  {% elif f.support == 'unsupported' %}<span class="tag uns">unsupported</span>{% endif %}
+  {% if f.support == 'inferred' %}<span class="tag inf" title="{{ help.inferred }}">inferred</span>
+  {% elif f.support == 'unsupported' %}<span class="tag uns" title="{{ help.unsupported }}">unsupported</span>{% endif %}
   {% for n, where in f.numbers %}<span class="tag {{ 'numq' if where == 'quote' else 'nump' }}"
-     title="{{ 'not in this field’s quotes' if where == 'quote' else 'not anywhere in the paper' }}">{{ n }} {{ '∉ quote' if where == 'quote' else '∉ paper' }}</span>{% endfor %}
+     title="{{ help.numq if where == 'quote' else help.nump }}">{{ n }} {{ '∉ quote' if where == 'quote' else '∉ paper' }}</span>{% endfor %}
 </span>{% endmacro %}
 
 {% macro quote(q) %}
   <blockquote class="quote{{ ' notfound' if not q.found }}">
     <span class="rendered">{{ q.html|safe }}</span><code class="raw">{{ q.raw }}</code>
-    <footer>
-      {% if q.found %}{{ q.loc }}{% if q.also %} · <span class="also">also appears {{ q.also }}× elsewhere</span>{% endif %}
-      {% else %}<span class="nf">not found in the source</span>{% endif %}
+    <footer title="{{ help.loc }}">
+      {% if q.found %}{{ q.loc }}{% if q.also %} · <span class="also" title="{{ help.also }}">also appears {{ q.also }}× elsewhere</span>{% endif %}
+      {% else %}<span class="nf" title="{{ help.notfound }}">not found in the source</span>{% endif %}
     </footer>
   </blockquote>
 {% endmacro %}
@@ -26,7 +26,7 @@
     <div class="figs">
       {% for file in f.files %}
         {% if file.renderable %}<img loading="lazy" src="/figure/{{ file.name }}" alt="{{ file.name }}">
-        {% else %}<div class="norender">{{ file.name }}: figure not renderable</div>{% endif %}
+        {% else %}<div class="norender" title="{{ help.norender }}">{{ file.name }}: figure not renderable</div>{% endif %}
       {% endfor %}
     </div>
     <details class="caption"><summary>caption</summary><span class="rendered">{{ f.caption_html|safe }}</span></details>
@@ -44,26 +44,26 @@
         hx-on::after-request="this.hidden = true; this.reset()">
     <input type="hidden" name="field_path" value="{{ f.path }}">
     {% for k, label in flag_kinds.items() %}
-      <label><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if loop.first }}><kbd>{{ loop.index }}</kbd> {{ label }}</label>
+      <label title="{{ help[k] }}"><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if loop.first }}><kbd>{{ loop.index }}</kbd> {{ label }}</label>
     {% endfor %}
     <input type="text" name="note" placeholder="note (optional), Enter saves">
   </form>
 {% endmacro %}
 
-{% macro flag_button(f) %}<button class="flagbtn" type="button" title="Flag (f)">⚑</button>{% endmacro %}
+{% macro flag_button(f) %}<button class="flagbtn" type="button" title="{{ help.flag }}">⚑</button>{% endmacro %}
 
 {% macro verdict(card) %}
   <form class="verdict" id="verdict" hx-post="/reviews" hx-target="#saved">
     <input type="hidden" name="seconds_spent" value="0">
-    <span class="grp">Relevant?
+    <span class="grp" title="{{ help.relevance }}">Relevant?
       <label><input type="radio" name="relevance" value="yes" required><kbd>y</kbd> yes</label>
       <label><input type="radio" name="relevance" value="partly"><kbd>p</kbd> partly</label>
       <label><input type="radio" name="relevance" value="no"><kbd>n</kbd> no</label>
     </span>
-    <label class="grp"><input type="checkbox" name="deep_read" value="yes"><kbd>d</kbd> deep read
+    <label class="grp" title="{{ help.deep_read }}"><input type="checkbox" name="deep_read" value="yes"><kbd>d</kbd> deep read
       <small>(agent: {{ 'yes' if card.opinion.deep_read.recommend else 'no' }})</small></label>
     <input type="text" name="note" placeholder="note">
-    <button type="submit"><kbd>s</kbd> save review</button>
+    <button type="submit" title="{{ help.save }}"><kbd>s</kbd> save review</button>
     <span id="saved"></span>
   </form>
 {% endmacro %}

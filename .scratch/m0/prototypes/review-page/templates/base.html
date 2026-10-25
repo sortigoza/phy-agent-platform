@@ -23,15 +23,15 @@
     <span class="authors">{{ meta.authors }}</span> · <span class="title">{{ meta.title }}</span>
   </div>
   <div class="badges">
-    {% if meta.status == 'stale' %}<span class="badge stale" title="{{ meta.stale_note }}">Stale</span>{% endif %}
-    {% if n_numbers %}<span class="badge num">{{ n_numbers }} number{{ 's' if n_numbers > 1 }} not grounded</span>{% endif %}
-    <span class="badge sup">{{ counts.supported }} supported</span>
-    <span class="badge inf">{{ counts.inferred }} inferred</span>
-    <span class="badge uns{{ ' zero' if not counts.unsupported }}">{{ counts.unsupported }} unsupported</span>
+    {% if meta.status == 'stale' %}<span class="badge stale" title="{{ meta.stale_note }}. {{ help.stale }}">Stale</span>{% endif %}
+    {% if n_numbers %}<span class="badge num" title="{{ help.num }}">{{ n_numbers }} number{{ 's' if n_numbers > 1 }} not grounded</span>{% endif %}
+    <span class="badge sup" title="{{ help.supported }}">{{ counts.supported }} supported</span>
+    <span class="badge inf" title="{{ help.inferred }}">{{ counts.inferred }} inferred</span>
+    <span title="{{ help.unsupported }}" class="badge uns{{ ' zero' if not counts.unsupported }}">{{ counts.unsupported }} unsupported</span>
   </div>
-  <div class="timer" id="timer" title="Review time. Amber at 4:00, red at 5:00.">0:00</div>
+  <div class="timer" id="timer" title="{{ help.timer }}">0:00</div>
 </header>
-{% if meta.stale_note %}<div class="stalebar">Stale: {{ meta.stale_note }}. Rated yes/partly → re-Read is queued.</div>{% endif %}
+{% if meta.stale_note %}<div class="stalebar" title="{{ help.stale }}">Stale: {{ meta.stale_note }}. Rated yes/partly → re-Read is queued.</div>{% endif %}
 {% block subbar %}{% endblock %}
 </div>
 
@@ -65,7 +65,7 @@
   <span>{{ variant }} ({{ variants[variant] }}){% if demo %} · demo states{% endif %}</span>
   <button data-cycle="1">▶</button>
   <a href="?variant={{ variant }}&demo={{ 0 if demo else 1 }}">{{ 'real Card' if demo else 'demo states' }}</a>
-  <span class="hint">? keys</span>
+  <span class="hint" title="{{ help.help }}">? keys</span>
 </div>
 </body>
 </html>
