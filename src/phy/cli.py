@@ -13,6 +13,7 @@ import typer
 import phy
 from phy import init as phy_init
 from phy import log as phy_log
+from phy import verify as verify_stage
 from phy import watch as watch_stage
 from phy.arxiv import ArxivUnavailable, OaiError
 from phy.card import export_schemas
@@ -41,6 +42,7 @@ READ_ERRORS = (
     tarfile.TarError,
     NoMainFile,
 )
+VERIFY_ERRORS = (ConfigError, verify_stage.NoCard)
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Physics Agent Platform.")
 schema_app = typer.Typer(no_args_is_help=True, help="The Card JSON Schemas.")
@@ -87,8 +89,8 @@ def init() -> None:
     typer.echo(f"auth ok: {report.credential_source}")
 
 
-def _arxiv_id(value: str) -> str:
-    if not ARXIV_ID.fullmatch(value):
+def _arxiv_id(value: str | None) -> str | None:
+    if value is not None and not ARXIV_ID.fullmatch(value):
         raise typer.BadParameter(f"{value!r} is not a new-style arXiv id like 1904.12072")
     return value
 
@@ -130,6 +132,38 @@ def read(
                 f"{paper}v{outcome.version} already has card {outcome.card_id};"
                 " pass --force to replace it"
             )
+
+
+@app.command()
+def verify(
+    paper: Annotated[
+        str | None,
+        typer.Option("--paper", callback=_arxiv_id, help="Verify only this Paper's latest Card."),
+    ] = None,
+    force: Annotated[
+        bool, typer.Option("--force", help="Re-verify the --paper Card if already verified.")
+    ] = False,
+) -> None:
+    """Check every draft Card's quotes against its flattened text and set Support."""
+    if force and paper is None:
+        raise typer.BadParameter("--force needs --paper")
+    paths = resolve_paths()
+    with phy_lock(paths):
+        try:
+            outcome = verify_stage.run(Ctx.load(paths), paper, force=force)
+        except VERIFY_ERRORS as e:
+            log.error("verify.failed", error=str(e))
+            raise typer.Exit(1) from None
+    match outcome:
+        case verify_stage.AlreadyVerified():
+            typer.echo(
+                f"card {outcome.card_id} for {paper}v{outcome.version} is already verified;"
+                " pass --force to re-verify it"
+            )
+        case verify_stage.Ran():
+            typer.echo(f"{len(outcome.verified)} verified, {len(outcome.failed)} failed")
+            if outcome.failed:
+                raise typer.Exit(1)
 
 
 @app.command()
