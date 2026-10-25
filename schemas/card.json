@@ -1,0 +1,340 @@
+{
+  "$defs": {
+    "DeepRead": {
+      "properties": {
+        "recommend": {
+          "title": "Recommend",
+          "type": "boolean"
+        },
+        "why": {
+          "title": "Why",
+          "type": "string"
+        }
+      },
+      "required": [
+        "recommend",
+        "why"
+      ],
+      "title": "DeepRead",
+      "type": "object"
+    },
+    "FlaggedLimitation": {
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "FlaggedLimitation",
+      "type": "object"
+    },
+    "KeyEquation": {
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The \\label key of the equation, or null if it has none.",
+          "title": "Label"
+        },
+        "latex": {
+          "description": "The equation body copied from the source.",
+          "title": "Latex",
+          "type": "string"
+        },
+        "meaning": {
+          "title": "Meaning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "latex",
+        "meaning"
+      ],
+      "title": "KeyEquation",
+      "type": "object"
+    },
+    "KeyFigure": {
+      "properties": {
+        "label": {
+          "description": "The \\label key of the figure environment.",
+          "title": "Label",
+          "type": "string"
+        },
+        "why": {
+          "title": "Why",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "why"
+      ],
+      "title": "KeyFigure",
+      "type": "object"
+    },
+    "Opinion": {
+      "description": "The agent's own judgement, never the paper's claims.",
+      "properties": {
+        "limitations_flagged": {
+          "description": "At most 3.",
+          "items": {
+            "$ref": "#/$defs/FlaggedLimitation"
+          },
+          "title": "Limitations Flagged",
+          "type": "array"
+        },
+        "deep_read": {
+          "$ref": "#/$defs/DeepRead"
+        }
+      },
+      "required": [
+        "limitations_flagged",
+        "deep_read"
+      ],
+      "title": "Opinion",
+      "type": "object"
+    },
+    "QuestionMatch": {
+      "properties": {
+        "id": {
+          "description": "A research question id, such as Q1.",
+          "title": "Id",
+          "type": "string"
+        },
+        "why": {
+          "title": "Why",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "why"
+      ],
+      "title": "QuestionMatch",
+      "type": "object"
+    },
+    "VerifiedFact": {
+      "properties": {
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/VerifiedQuote"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "inferred": {
+          "description": "true if the value is not stated in the quotes but follows from them (combined, converted or paraphrased beyond rewording).",
+          "title": "Inferred",
+          "type": "boolean"
+        },
+        "support": {
+          "enum": [
+            "supported",
+            "inferred",
+            "unsupported"
+          ],
+          "title": "Support",
+          "type": "string"
+        },
+        "ungrounded_numbers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ungrounded Numbers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "evidence",
+        "value",
+        "inferred",
+        "support",
+        "ungrounded_numbers"
+      ],
+      "title": "VerifiedFact",
+      "type": "object"
+    },
+    "VerifiedLimitation": {
+      "properties": {
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/VerifiedQuote"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "support": {
+          "enum": [
+            "supported",
+            "inferred",
+            "unsupported"
+          ],
+          "title": "Support",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence",
+        "value",
+        "support"
+      ],
+      "title": "VerifiedLimitation",
+      "type": "object"
+    },
+    "VerifiedQuote": {
+      "properties": {
+        "quote": {
+          "description": "Copied character for character from the paper text, LaTeX included. One contiguous span of 5-60 words inside one paragraph. No ellipses.",
+          "title": "Quote",
+          "type": "string"
+        },
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "loc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Loc"
+        },
+        "match_count": {
+          "title": "Match Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "quote",
+        "found",
+        "loc",
+        "match_count"
+      ],
+      "title": "VerifiedQuote",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "tldr": {
+      "description": "Two sentences: what they did and the main result.",
+      "title": "Tldr",
+      "type": "string"
+    },
+    "key_results": {
+      "items": {
+        "$ref": "#/$defs/VerifiedFact"
+      },
+      "title": "Key Results",
+      "type": "array"
+    },
+    "assumptions": {
+      "items": {
+        "$ref": "#/$defs/VerifiedFact"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "system": {
+      "$ref": "#/$defs/VerifiedFact"
+    },
+    "method": {
+      "$ref": "#/$defs/VerifiedFact"
+    },
+    "baselines": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VerifiedFact"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "claimed_advance": {
+      "$ref": "#/$defs/VerifiedFact"
+    },
+    "limitations_stated": {
+      "items": {
+        "$ref": "#/$defs/VerifiedLimitation"
+      },
+      "title": "Limitations Stated",
+      "type": "array"
+    },
+    "key_equations": {
+      "description": "At most 3.",
+      "items": {
+        "$ref": "#/$defs/KeyEquation"
+      },
+      "title": "Key Equations",
+      "type": "array"
+    },
+    "key_figures": {
+      "description": "At most 3.",
+      "items": {
+        "$ref": "#/$defs/KeyFigure"
+      },
+      "title": "Key Figures",
+      "type": "array"
+    },
+    "code_data": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VerifiedFact"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "questions": {
+      "description": "At most 4.",
+      "items": {
+        "$ref": "#/$defs/QuestionMatch"
+      },
+      "title": "Questions",
+      "type": "array"
+    },
+    "opinion": {
+      "$ref": "#/$defs/Opinion"
+    }
+  },
+  "required": [
+    "tldr",
+    "key_results",
+    "assumptions",
+    "system",
+    "method",
+    "baselines",
+    "claimed_advance",
+    "limitations_stated",
+    "key_equations",
+    "key_figures",
+    "code_data",
+    "questions",
+    "opinion"
+  ],
+  "title": "Card",
+  "type": "object"
+}

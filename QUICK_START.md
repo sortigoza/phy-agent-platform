@@ -132,7 +132,7 @@ All knobs live in `config.toml` unless noted. Change one at a time, and check th
 | `read.weekly_ceiling` | `50` | Hard cap on Cards per week | Your attention budget changes |
 | `read.model` | `claude-sonnet-5-5` | The Card-writing model | Field accuracy plateaus (try `claude-opus-5-5` and re-run the Golden set) |
 | `read.effort` | `medium` | How much thinking the model does per Card | The unsupported-field rate is high (raise it) or cost is high (lower it) |
-| `read.prompt_version` | `v1` | Which `prompts/read/<v>.md` is used | After a Meta-work cycle |
+| `read.prompt_version` | `v2` | Which `prompts/read/<v>.md` is used | After a Meta-work cycle |
 | `read.recard_stale` | `relevant_only` | Re-card new versions of Papers you rated yes or partly | You want every new version re-carded (`all`) or none (`never`) |
 | `read.use_batch` *(M1)* | `false` | Send Read calls through the Batch API (50% off, results usually within 1 h) | Cost matters more than same-morning Cards |
 
@@ -165,12 +165,12 @@ Edit `golden/manifest.yaml`. Any change bumps `version`.
 ## 8. Meta-work: changing the system safely
 
 ```sh
-cp prompts/read/v1.md prompts/read/v2.md       # never edit a used version in place
-$EDITOR prompts/read/v2.md                     # address the Flags / red tile you saw
-uv run phy eval --prompt read=v2               # Golden set: grounding, invented numbers, filter, diff vs the accepted run
+cp prompts/read/v2.md prompts/read/v3.md       # never edit a used version in place
+$EDITOR prompts/read/v3.md                     # address the Flags / red tile you saw
+uv run phy eval --prompt read=v3               # Golden set: grounding, invented numbers, filter, diff vs the accepted run
 # open the printed /eval/<id> link and review the Material changes
 # accept only if nothing regressed:
-#   set read.prompt_version = "v2" in config.toml
+#   set read.prompt_version = "v3" in config.toml
 uv run phy eval accept <id>                    # refuses if config doesn't match the run, or on a hard fail
 #   then add a line to CHANGELOG.md and commit
 ```

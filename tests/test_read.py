@@ -19,6 +19,12 @@ FIXTURES = Path(__file__).parent / "fixtures" / "oai"
 OAI_URL = "https://oaipmh.arxiv.org/oai"
 SRC_URL = "https://arxiv.org/src/1904.12072v3"
 COUNT_TOKENS_URL = "https://api.anthropic.com/v1/messages/count_tokens"
+MESSAGES_URL = "https://api.anthropic.com/v1/messages"
+RECORDED = json.loads(
+    (
+        Path(__file__).parent / "fixtures" / "anthropic" / "read_1904.12072v3_response.json"
+    ).read_text()
+)
 MAIN_TEX = (
     b"\\documentclass{revtex4}\n\\begin{document}\n% draft note\n"
     b"\\input{sections/intro}\nWe train a flow.\n\\end{document}\n"
@@ -57,6 +63,13 @@ def anthropic_api():
             return_value=httpx.Response(200, json={"input_tokens": 1234})
         )
         yield route
+
+
+@pytest.fixture
+def messages_api(monkeypatch):
+    monkeypatch.setattr("anthropic._base_client.time.sleep", lambda _: None)
+    with respx.mock(using="httpx2") as router:
+        yield router.post(MESSAGES_URL).mock(return_value=httpx.Response(200, json=RECORDED))
 
 
 def phy(*args):
@@ -188,3 +201,81 @@ def test_held_phy_lock_makes_read_exit_zero_without_fetching(installed):
     assert result.exit_code == 0
     assert not router.calls
     assert not (installed / "papers").exists()
+
+
+def test_read_writes_a_draft_card_from_one_traced_call(installed, arxiv, messages_api):
+    result = phy("read", "--paper", "1904.12072")
+
+    assert result.exit_code == 0, result.output
+    assert messages_api.call_count == 1
+    body = json.loads(messages_api.calls.last.request.content)
+    assert "M. S. Albergo, G. Kanwar, P. E. Shanahan" in body["messages"][0]["content"][1]["text"]
+    assert "Lattice field theory." in body["messages"][0]["content"][0]["text"]
+
+    [card] = rows(installed, "SELECT * FROM cards")
+    assert (card["arxiv_id"], card["version"], card["status"]) == ("1904.12072", 3, "draft")
+    assert card["model"] == "claude-sonnet-5-5"
+    assert card["prompt_version"] == "v2"
+    assert card["schema_version"] == "card/v1"
+    assert json.loads(card["card_json"])["tldr"].startswith("The authors propose")
+    [run] = rows(installed, "SELECT * FROM runs")
+    assert run["id"] == card["run_id"]
+    assert (run["stage"], run["status"], run["arxiv_id"]) == ("read", "ok", "1904.12072")
+    assert (installed / run["log_path"]).is_file()
+    assert f"card {card['id']}" in result.output
+    assert "$0.0983" in result.output
+
+
+def test_a_second_read_replaces_nothing(installed, arxiv, messages_api):
+    assert phy("read", "--paper", "1904.12072").exit_code == 0
+    [before] = rows(installed, "SELECT * FROM cards")
+
+    result = phy("read", "--paper", "1904.12072")
+
+    assert result.exit_code == 0, result.output
+    assert messages_api.call_count == 1
+    assert rows(installed, "SELECT * FROM cards") == [before]
+    assert "--force" in result.output
+
+
+def test_force_replaces_the_card_in_place(installed, arxiv, messages_api):
+    assert phy("read", "--paper", "1904.12072").exit_code == 0
+    [before] = rows(installed, "SELECT * FROM cards")
+
+    result = phy("read", "--paper", "1904.12072", "--force")
+
+    assert result.exit_code == 0, result.output
+    assert messages_api.call_count == 2
+    [after] = rows(installed, "SELECT * FROM cards")
+    assert after["id"] == before["id"]
+    assert after["run_id"] != before["run_id"]
+    assert len(rows(installed, "SELECT * FROM runs")) == 2
+
+
+def test_a_failed_call_leaves_a_failed_run_and_no_card(installed, arxiv, messages_api):
+    overloaded = {"type": "error", "error": {"type": "overloaded_error", "message": "Overloaded"}}
+    messages_api.mock(
+        side_effect=[
+            httpx.Response(
+                500, json={"type": "error", "error": {"type": "api_error", "message": "boom"}}
+            ),
+            httpx.Response(529, json=overloaded),
+            httpx.Response(529, json=overloaded),
+        ]
+    )
+
+    result = phy("read", "--paper", "1904.12072")
+
+    assert result.exit_code == 1
+    assert "529" in result.output
+    assert rows(installed, "SELECT * FROM cards") == []
+    [run] = rows(installed, "SELECT * FROM runs")
+    assert run["status"] == "failed"
+    assert "529" in run["error"]
+
+
+def test_schema_export_writes_both_schemas(tmp_path):
+    result = phy("schema", "export", "--dir", str(tmp_path))
+
+    assert result.exit_code == 0, result.output
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["card.json", "card_draft.json"]
