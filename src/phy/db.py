@@ -286,5 +286,55 @@ def write_draft_card(
     return row["id"]
 
 
+def unscreened(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """The latest version of every Paper that has no screening, with the Paper's metadata.
+    Older versions are never screened: `papers` holds only the latest title and abstract."""
+    return conn.execute(
+        "SELECT p.arxiv_id, p.latest_version AS version, p.title, p.abstract, p.categories,"
+        " p.sets FROM papers p LEFT JOIN screenings s"
+        " ON s.arxiv_id = p.arxiv_id AND s.version = p.latest_version"
+        " WHERE s.arxiv_id IS NULL ORDER BY p.arxiv_id"
+    ).fetchall()
+
+
+def get_screening(conn: sqlite3.Connection, arxiv_id: str, version: int) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM screenings WHERE arxiv_id = ? AND version = ?", (arxiv_id, version)
+    ).fetchone()
+
+
+def write_screening(
+    conn: sqlite3.Connection,
+    arxiv_id: str,
+    version: int,
+    prefilter: str,
+    scores_json: str | None,
+    best_score: float | None,
+    screened_in: bool,
+    model: str | None,
+    prompt_version: str | None,
+    run_id: str,
+) -> None:
+    """Store a Paper version's screening, replacing the one it has (`filter --force`)."""
+    with conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO screenings (arxiv_id, version, prefilter, scores_json,"
+            " best_score, screened_in, model, prompt_version, run_id, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                arxiv_id,
+                version,
+                prefilter,
+                scores_json,
+                best_score,
+                int(screened_in),
+                model,
+                prompt_version,
+                run_id,
+                _now(),
+            ),
+        )
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")

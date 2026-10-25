@@ -11,6 +11,7 @@ import structlog
 import typer
 
 import phy
+from phy import filter as filter_stage
 from phy import init as phy_init
 from phy import log as phy_log
 from phy import watch as watch_stage
@@ -29,6 +30,7 @@ log = structlog.get_logger()
 
 ARXIV_ID = re.compile(r"\d{4}\.\d{4,5}")
 WATCH_ERRORS = (ConfigError, ArxivUnavailable, OaiError, httpx.HTTPError)
+FILTER_ERRORS = (ConfigError, AuthError, PromptError, filter_stage.UnknownPaper)
 READ_ERRORS = (
     ConfigError,
     AuthError,
@@ -87,8 +89,8 @@ def init() -> None:
     typer.echo(f"auth ok: {report.credential_source}")
 
 
-def _arxiv_id(value: str) -> str:
-    if not ARXIV_ID.fullmatch(value):
+def _arxiv_id(value: str | None) -> str | None:
+    if value is not None and not ARXIV_ID.fullmatch(value):
         raise typer.BadParameter(f"{value!r} is not a new-style arXiv id like 1904.12072")
     return value
 
@@ -160,6 +162,39 @@ def watch(
             log.error("watch.failed", error=str(e))
             raise typer.Exit(1) from None
     typer.echo(f"mark: {mark.isoformat() if mark else 'none'}")
+
+
+@app.command("filter")
+def filter_(
+    paper: Annotated[
+        str | None,
+        typer.Option(
+            "--paper", callback=_arxiv_id, help="Screen only this Paper (its latest version)."
+        ),
+    ] = None,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="With --paper: replace its screening if it has one."),
+    ] = False,
+) -> None:
+    """Screen every unscreened Paper version: the code pre-filter, then one Filter call per
+    Candidate."""
+    if force and paper is None:
+        raise typer.BadParameter("--force needs --paper")
+    paths = resolve_paths()
+    with phy_lock(paths):
+        try:
+            screened = filter_stage.run(Ctx.load(paths), paper=paper, force=force)
+        except FILTER_ERRORS as e:
+            log.error("filter.failed", error=str(e))
+            raise typer.Exit(1) from None
+    typer.echo(
+        f"{screened.candidates} candidates, {screened.screened_in} screened in,"
+        f" {screened.prefilter_fails} pre-filter fail{'s' * (screened.prefilter_fails != 1)}"
+        f", {screened.failed} failed calls"
+    )
+    if screened.failed:
+        raise typer.Exit(1)
 
 
 @schema_app.command("export")

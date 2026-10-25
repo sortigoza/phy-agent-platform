@@ -244,6 +244,7 @@ A Paper that passes is a Candidate.
 - `score` is a float from 0 to 1, anchored in the prompt: **0.9+** the main contribution answers the question directly (always Carded); **0.7** on the topic but a narrower or neighbouring aspect; **0.5** something someone working on the question would use, though the focus is elsewhere (the bar for a Card); **0.3** same field or a shared technique, nothing new for the question; **0.1** shared words only. A paper under a scope note scores at most 0.3. Structured outputs can't enforce a numeric range, so code clamps to [0, 1] and logs a warning.
 - Measured on the seed Papers plus six keyword-sharing probes (Filter prompt ticket in the M0 map): seeds scored 0.9–0.95 on their question, and every probe scored ≤ 0.3. A warm call costs about $0.00015 per Candidate (about 200 output tokens including thinking at `low`) and takes about 2 s.
 - `best_score` is the maximum over questions. The Paper is Screened in when `best_score ≥ filter.threshold` (default 0.5).
+- Filter screens a Paper's latest version only (`papers` holds only the latest title and abstract), so a new version gets a fresh screening on the next run. Each call is its own run with its own `runs` row (`<run_id>-<arxiv_id>v<version>`), as one Read is; the Filter run's own `runs` row is what pre-filter fails point at. A failed call writes no screening, so the next run retries it. `phy filter --paper ID --force` redoes one.
 
 ### 7.3 Read
 

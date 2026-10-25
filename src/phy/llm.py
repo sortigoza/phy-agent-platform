@@ -18,13 +18,17 @@ from phy.card import SCHEMA_VERSION, CardDraft, draft_format
 from phy.config import Price
 from phy.ctx import Ctx
 from phy.prompts import PromptError
-from phy.questions import render_questions
+from phy.questions import render_questions, render_scope_notes
+from phy.screening import SCHEMA_VERSION as FILTER_SCHEMA_VERSION
+from phy.screening import scores_format, scores_model
 from phy.tracer import Response, Run
 
 log = structlog.get_logger()
 
 # A Card measured 3k output tokens; the SDK refuses a non-streaming call above about 21k.
 READ_MAX_TOKENS = 16_000
+# A Filter call measured about 220 output tokens, thinking included.
+FILTER_MAX_TOKENS = 4_000
 
 LOGIN_HINT = "run `ant auth login` (or export ANTHROPIC_API_KEY for interactive use)"
 
@@ -107,15 +111,7 @@ def read_card(ctx: Ctx, run: Run, paper_text: str, authors: str) -> CardDraft:
         )
     if prompt.system is None:
         raise PromptError(f"prompt {prompt.name} names no shared system prompt")
-    for key in ["model", "effort"]:
-        if getattr(prompt, key) != getattr(config, key):
-            log.warning(
-                "llm.prompt_config_differs",
-                key=key,
-                prompt=prompt.name,
-                prompt_value=getattr(prompt, key),
-                config_value=getattr(config, key),
-            )
+    _warn_on_drift(prompt, config)
     system = prompts.load(*prompt.system.split("/", 1)).render()
     available = {"questions": render_questions(ctx.questions), "authors": authors}
     instructions = prompt.render(**{k: v for k, v in available.items() if k in prompt.params})
@@ -139,6 +135,57 @@ def read_card(ctx: Ctx, run: Run, paper_text: str, authors: str) -> CardDraft:
         "output_config": {"effort": config.effort, "format": draft_format()},
     }
     return _parse(ctx, run, request, CardDraft, ctx.config.prices[config.model])
+
+
+def screen(ctx: Ctx, run: Run, title: str, categories: str, abstract: str) -> dict[str, dict]:
+    """One Filter call on a Candidate: `{Qn: {reason, score}}` with every score clamped to
+    [0, 1]. The rendered Filter prompt is the whole system prompt and carries the cache
+    breakpoint; the user turn is the title, categories and abstract."""
+    config = ctx.config.filter
+    prompt = prompts.load("filter", config.prompt_version)
+    if prompt.schema_version != FILTER_SCHEMA_VERSION:
+        raise PromptError(
+            f"prompt {prompt.name} targets {prompt.schema_version}, not {FILTER_SCHEMA_VERSION}"
+        )
+    if prompt.system != "self":
+        raise PromptError(f"prompt {prompt.name} must be its own system prompt (system: self)")
+    _warn_on_drift(prompt, config)
+    system = prompt.render(
+        questions=render_questions(ctx.questions), scope_notes=render_scope_notes(ctx.questions)
+    )
+    paper = (
+        f"<paper>\nTitle: {title}\nCategories: {', '.join(categories.split())}\n\n"
+        f"Abstract: {abstract}\n</paper>"
+    )
+    request = {
+        "model": config.model,
+        "max_tokens": FILTER_MAX_TOKENS,
+        "system": [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+        "messages": [{"role": "user", "content": paper}],
+        "output_config": {"effort": config.effort, "format": scores_format(ctx.questions)},
+    }
+    output = _parse(ctx, run, request, scores_model(ctx.questions), ctx.config.prices[config.model])
+    scores = output.model_dump()
+    for qid, item in scores.items():
+        clamped = min(max(item["score"], 0.0), 1.0)
+        if clamped != item["score"]:
+            # Structured outputs can't enforce a numeric range, and the call is already paid for.
+            log.warning("llm.score_clamped", question=qid, score=item["score"])
+            item["score"] = clamped
+    return scores
+
+
+def _warn_on_drift(prompt: prompts.Prompt, config) -> None:
+    """The prompt names the model and effort it was written for; config decides what runs."""
+    for key in ["model", "effort"]:
+        if getattr(prompt, key) != getattr(config, key):
+            log.warning(
+                "llm.prompt_config_differs",
+                key=key,
+                prompt=prompt.name,
+                prompt_value=getattr(prompt, key),
+                config_value=getattr(config, key),
+            )
 
 
 def _parse[M: BaseModel](
