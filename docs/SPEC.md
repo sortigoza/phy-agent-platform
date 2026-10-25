@@ -169,7 +169,7 @@ The Card schema lives in `src/phy/card.py` as two Pydantic models. `CardDraft` i
 | `paper_versions` | Paper version | Watch, Read | arxiv_id, version, submitted_at (from arXivRaw), first_seen_datestamp (OAI datestamp of the harvest that first carried this version), source_type (latex, pdf; detected by Read on download), local_path, sha256, fetched_at |
 | `state` | key | Watch | `watch.hwm` (date), `watch.last_success_at` |
 | `screenings` | Paper version | Filter | arxiv_id, version, prefilter (pass, fail, skipped), scores_json ({Q1..Q4: score, reason}), best_score, screened_in, model, prompt_version, run_id |
-| `cards` | Card | Read, Verify | id, arxiv_id, version, card_json, status (draft, verified, reviewed, stale), unsupported_count, model, prompt_version, schema_version, run_id |
+| `cards` | Card | Read, Verify | id, arxiv_id, version, card_json, status (draft, verified, reviewed, stale), unsupported_count, inferred_count, invented_numbers_json, warnings_json, model, prompt_version, schema_version, run_id |
 | `reviews` | Review | UI | card_id, relevance (yes, partly, no), deep_read, seconds_spent, note, created_at |
 | `flags` | Flag | UI | card_id, field_path, kind (wrong_value, quote_doesnt_support, missing, should_be_opinion), note, created_at |
 | `runs` | Stage execution | every Stage | id, stage, arxiv_id, status, error, model, prompt_version, tokens_in, tokens_out, cache_read_tokens, cost_usd, started_at, ended_at, log_path |
@@ -257,18 +257,24 @@ The result is `flattened.txt`: **raw flattened LaTeX**, never detexed (see the Q
 1. **Verbatim quotes.** One function, `canonicalise(text, source_type)`, is the matching contract for both source types. It runs identically on the quote and on `flattened.txt`, and a quote is found if canonical(quote) is a substring of canonical(source).
    - For LaTeX it removes `\cite`/`\citep`/`\citet`/`\ref`/`\eqref`/`\label` (with any `~` before them), maps `\% \& \$` to the plain characters, unwraps `\emph`/`\textit`/`\textbf`/`\text`, maps quotes and dashes to one form, maps `~ \, \ \;` to a space, and collapses whitespace.
    - Math is otherwise left as written, and matching is case-sensitive. Every rule has a unit test from a real seed-paper snippet.
+   - It is built as a single pass that records the raw offset of every canonical character. `canonicalise_mapped()` returns the text plus that offset array, so `loc` maps a match back to the raw text exactly. Matching and locating share one code path.
    - A quote must be one contiguous span of 5–60 words, with no ellipses, that doesn't cross a paragraph or section boundary.
 
-   If a quote is not found or breaks the shape rules, the field is `unsupported`. There are no exceptions. Otherwise the field is `inferred` if the model marked it so, and `supported` if not.
-2. **Invented numbers.** Every number in `key_results` values must appear in the canonicalised source text, with tolerant formatting (for example `1.2\times10^{-3}` matches `1.2e-3`). Any miss is a hard failure for that Card. The Card stays visible but carries a red badge.
-   - **Per field:** every number in any Fact's value must also appear in that Fact's own quotes. A value can otherwise carry parameters from elsewhere in the paper and still look supported. The failure status is decided in the Code checks in Verify ticket.
+   **Every** quote on a Fact must be found and meet the shape rules, or the Fact is `unsupported`. There are no exceptions. A Fact with no Evidence is `unsupported`.
+2. **Numbers.** A number is a token with an optional sign, digits with an optional decimal part, an optional `(d)` uncertainty and an optional exponent (`e-3`, `\times10^{-3}`, `×10⁻³`).
+   - Digits glued to an identifier are not numbers: after a letter, `_`, `^` or `\` (`\phi^4`, `V^2`, `m_p`), or before a letter (`2D`), except for `%` and an `x`/`×` multiplier (`10x`). Numbers written as words are ignored.
+   - One extractor runs on values, quotes and source, and numbers are compared as parsed values, never as substrings. Two numbers are equal when both the decimal value and the significant figures match: `1.2e-3` = `1.2\times10^{-3}` = `0.0012`, but `1.20` ≠ `1.2`. The sign is ignored. Error bars split into two numbers: `4.03(6)` and `4.03 \pm 0.06` both give `4.03` and `0.06`. Units are not checked, and conversions (`0.7` vs `70%`) don't match.
+   - **Invented numbers (whole source):** every number in any Fact's value and in the `tldr` must appear in the canonicalised source. A miss makes that Fact `unsupported`, and the number goes into the Card's `invented_numbers`, which shows a red badge. The Card stays visible.
+   - **Per field:** every number in a Fact's value must also appear in that Fact's own quotes. Otherwise a `supported` Fact becomes `inferred`, and the missing numbers are stored on it as `ungrounded_numbers` for the UI to highlight.
+   - Support precedence is `unsupported` > `inferred` > `supported`: the model's `inferred: true` or any ungrounded number gives `inferred`.
 3. **Locations are derived, not checked.** The model writes no Evidence `loc`. Verify computes it from the first match position.
-   - It takes the enclosing section heading. Detection covers `\section`, `\subsection`, `\subsubsection`, `\paragraph`, `\appendix`, and preamble macros whose name or body contains `section`, such as `\ssection`.
-   - It adds the `\label` key when the match is inside an equation, `figure` or `table` environment. On the PDF path it gives the page instead.
+   - It takes the innermost enclosing heading, as raw LaTeX: `Sec. "…"`, or `App. "…"` after `\appendix`. Detection covers `\section`, `\subsection`, `\subsubsection`, `\paragraph` (starred too), and preamble macros whose name or body contains `section`, such as `\ssection`. Inside `\begin{abstract}` it is `Abstract`, and before the first heading `front matter`.
+   - It adds `· <label>` when the match is inside an `equation`, `align`, `gather`, `multline`, `eqnarray`, `figure` or `table` environment (starred too). On the PDF path it gives `p. N` instead, counted from `\f`.
    - Equation numbers are not computed. Verify also stores `match_count`.
-   - `key_equations` and `key_figures` carry `\label` keys. A key that doesn't exist in the source produces a warning.
+4. **Labels.** These checks give warnings only and never change Support. A `key_equations` or `key_figures` label that doesn't exist in the source gives a warning, and the entry stays visible with a chip. A key equation's canonical `latex` must be a substring of its labelled environment's canonical body. A key figure's label must sit in a `figure` environment.
+5. **List caps.** An over-cap list, including more than 2 Evidence quotes, keeps its first N, and an `over_cap` warning records the dropped count. The raw response stays in the run trace. Zero `key_results` gives a warning.
 
-After these checks the Card's status becomes `verified`, and `unsupported_count` is stored.
+After these checks the Card's status becomes `verified`. Failures never get a status of their own. Verify stores `unsupported_count` (inferred fields excluded), `inferred_count`, `invented_numbers` (the red badge) and `warnings` (`{kind, field, detail}`, shown as grey chips on their sections).
 
 **M1 model reviewer.** A separate prompt and a separate call that sees only one field's value, its quote, and the surrounding source passage. It never sees the Read reasoning. It answers whether the quote supports the value.
 
