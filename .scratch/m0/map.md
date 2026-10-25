@@ -27,10 +27,11 @@ Every M0 build decision is locked, and M0 (SPEC §3) is cut into ordered, vertic
 - [Code conventions and runtime plumbing](issues/07-code-conventions.md): all instance state (data plus `config.toml`, `questions.yaml`, `golden/`, `CHANGELOG.md`) lives in `$PHY_HOME` (default `~/.phy-agent-platform`, a local git repo phy never commits to); flat `src/phy/` modules; Typer; raw sqlite3 with `user_version` migrations; Pydantic config with `extra="forbid"`; structlog (readable stderr plus JSONL, SQLite first for metrics); pytest with respx and opt-in `-m live`; credentials via the SDK's own chain with `ant auth login` as default; `flock` locks; Python 3.13 and ruff.
 - [How the Golden run-to-run diff is shown](issues/10-golden-diff-display.md): CLI summary plus an `/eval/<id>` page; the baseline is the latest run accepted with `phy eval accept` (which checks config matches and refuses hard fails); the diff is stored on `eval_runs`; only material changes (Support, numbers, failing quotes, list items added or removed, Filter decisions) turn the tile red, while rewordings are folded; lists are paired by content; opinion changes are never red.
 - [Filter prompt v1 and its output schema](issues/09-filter-prompt-prototype.md): one call returns `{Qn: {reason, score}}`, with the schema built from the `questions.yaml` ids; the score is a float 0–1 anchored at 0.9/0.7/0.5/0.3/0.1 and clamped in code; reasons run at most 20 words, before the score; the Filter prompt is its own system prompt, and with the schema it makes a cached prefix of about 1,350 tokens (above the 512 minimum); a shared `render_questions()` never shows keywords, and a new `scope_notes` list carries the prose out-of-scope rules; a warm call costs $0.00015 per Candidate; the code is on branch `prototype/filter-prompt`.
+- [Monitoring page layout and the SQL behind each tile](issues/11-monitoring-page.md): tile wall grouped by question with a one-line-per-red-tile action list on top; grey tiles for nothing-to-compute; every tile is one SQL query over the §6 tables with no new columns (dates via `run_id` → `runs`, field totals via `json_tree`); 7-day windows except precision (14 d) and spend (ISO week); activity funnel; yes+partly is relevant; a new `/runs` list page is what tiles link to; the code is on branch `prototype/monitor-page`.
 
 ## Not yet specified
 
-_(nothing: the Monitoring page fog graduated into [Monitoring page layout and the SQL behind each tile](issues/11-monitoring-page.md))_
+_(nothing)_
 
 ## Out of scope
 

@@ -114,7 +114,7 @@ A Paper that appears in several sets gets the most permissive pre-filter of thos
    └───────────┴────► $PHY_HOME/phy.db (SQLite, WAL) ◄ phy ui (FastAPI + HTMX, localhost)
                               ▲                        ├─ /review     one Card at a time
                               │                        ├─ /monitor    Instrument tiles + funnel
-                         phy eval ◄── golden/          └─ /runs/<id>  run viewer
+                         phy eval ◄── golden/          └─ /runs        run list + viewer
 ```
 
 ### Components
@@ -357,28 +357,33 @@ Shows one Card at a time, ordered by `best_score`.
 
 ### `/monitor`
 
-Shows the Instrument tiles (green or red, with a one-week sparkline) and the weekly funnel. Every red tile links to the runs that caused it.
+Shows the Instrument tiles and the weekly funnel, with the page conventions (top bar with a red count, section pills, hover help).
+- **Layout, top to bottom:** an action list, the funnel strip, then the tiles grouped under their question. The action list has one line per red tile: the Instrument, its value, its action from the table below and a link to the runs behind it; the name jumps to the tile. With nothing red it is one "All green" line.
+- **Tile:** the name, the value, a sparkline of the last 7 days (one bar per day, weekends grey; Golden tiles show the last 7 eval runs instead), a note on what the value covers, the red rule and a "runs →" link. A tile is green, red, or grey when there is nothing to compute yet; grey says why ("no Reviews yet", "no Golden eval run yet", "baseline forming"). "Every M0 Instrument tile populated" means every tile has left grey.
+- **Links:** "runs →" opens the run list, `/runs` filtered by query string (`stage`, `status`, `ids`, `since`). Golden tiles link to `/eval/<id>`, and the invented-numbers tile to the Card.
+- **Windows:** the last 7 days, except Filter precision (14 days) and weekly spend (the ISO week from Monday 00:00 UTC, the window the guardrail enforces, shown with last week's total). Announcement days are Mon–Fri; arXiv holidays are ignored.
+- **Queries:** every tile is one SQL query over the §6 tables, with no extra columns. Screenings and Cards are dated by their `run_id`'s `runs.started_at`. The unsupported rate divides by the fields that carry a Support, counted with `json_tree(card_json)`. The mark's date is the day it last advanced, since it moves to the run's `responseDate`. `runs.status` is `ok` or `failed`.
 
 | Instrument | Question | Source | Red when | Action |
 | --- | --- | --- | --- | --- |
-| Papers harvested per announcement day | Is it running? | papers | 0 on an announcement day | Open the Watch run log |
+| Papers harvested per announcement day | Is it running? | paper_versions, state | 0 on the latest announcement day the last successful Watch covered | Open the Watch run log |
 | Days since the high-water mark advanced | Is it running? | state | > 2 announcement days | Check launchd and the last Watch run |
-| Stage failures | Is it running? | runs | any unretried failure | Open the run viewer |
-| Candidates per week | Is the funnel shaped right? | screenings | outside `alerts.candidates_range` | Tighten or loosen keywords |
+| Stage failures | Is it running? | runs | any failure in 7 days with no later `ok` run of the same Stage and paper | Open the run viewer |
+| Candidates per week | Is the funnel shaped right? | screenings | outside `alerts.candidates_range` (not judged until Filter has run for 7 days) | Tighten or loosen keywords |
 | Unsupported-field rate | Is it right? | cards | > 10% over 7 days | Inspect runs; revise the Read prompt or parser |
-| Grounding rate (Golden) | Is it right? | eval_runs | < 98% | Revert the change |
-| Invented numbers | Is it right? | cards, eval_runs | any | Inspect the Card; this is a hard fail on Golden |
-| Golden run-to-run diff | Did a change move anything? | eval_runs | any Material change on Dev, run not yet accepted | Review the diff on `/eval/<id>` before accepting |
-| Filter precision | Is it useful? | reviews | < 70% over 2 weeks (once ≥ 20 Reviews) | Add negative keywords or examples |
+| Grounding rate (Golden) | Is it right? | eval_runs | < 98% on the latest eval run | Revert the change |
+| Invented numbers | Is it right? | cards, eval_runs | any, on a Card from the last 7 days or the latest eval run | Inspect the Card; this is a hard fail on Golden |
+| Golden run-to-run diff | Did a change move anything? | eval_runs | the latest eval run has a Material change on Dev and is not accepted | Review the diff on `/eval/<id>` before accepting |
+| Filter precision | Is it useful? | reviews | yes or partly < 70% over 2 weeks (once ≥ 20 Reviews) | Add negative keywords or examples |
 | Median review time | Is the Card well designed? | reviews | > 5 min | Shorten or reorder the Card |
-| Cost per Carded paper | Is it affordable? | runs | > 2× the week-1 median | Find which Stage grew |
+| Cost per Carded paper | Is it affordable? | runs | median over papers (every run tied to the paper, retries included) > 2× the median of the 7 days from the first Card | Find which Stage grew |
 | Weekly spend vs guardrail | Is it affordable? | runs | ≥ 80% of `budget.weekly_usd` | Check the volume; raise the limit deliberately |
 
-**Funnel:** harvested → Candidates → Screened in → Carded → verified → reviewed → relevant → deep read. A sudden narrowing between two steps points to the Stage to inspect.
+**Funnel:** harvested → Candidates → Screened in → Carded → verified → reviewed → relevant (yes or partly) → deep read, each step counting what happened in the last 7 days, with each step's % of the one before. Because these are activity counts, not a cohort, a step can exceed 100% (reviewing last week's Cards). A sudden narrowing between two steps points to the Stage to inspect.
 
-### `/runs/<id>`
+### `/runs` and `/runs/<id>`
 
-The run viewer renders one run's JSONL log: request (prompt version, model, and the prompt with the paper text collapsed), response, parsed output, validation errors, tokens, cache hits, and cost. This covers "why did it fail?" until Langfuse arrives.
+`/runs` lists runs, newest first, filtered by the query string the tiles link with. The run viewer renders one run's JSONL log: request (prompt version, model, and the prompt with the paper text collapsed), response, parsed output, validation errors, tokens, cache hits, and cost. This covers "why did it fail?" until Langfuse arrives.
 
 **Alerts in M0** are red tiles only. M1 adds macOS notifications through `osascript` and a missed-papers log form.
 
