@@ -36,7 +36,7 @@ Build from the real prototype Card, `out/card.json` on branch `prototype/card-sc
 - **Order:** one column in Card order, which is also generation order: Summary (tl;dr, results, assumptions), Setup (system, method, baselines, claimed advance, code/data), Limitations, Equations & figures, Agent's opinion.
 - **Fields:** each field is a row with its label on the left (support and number pills wrap under the label), the value in the middle and a ⚑ button on the right.
 - **Shading:** inferred is blue, unsupported is red, and supported is unshaded. Null `baselines` and `code_data` show "none" and are not shaded.
-- **Quotes:** folded under each value in a "N quotes" disclosure. Each quote shows the derived `loc` and, when `match_count` > 1, "also appears N× elsewhere". A quote Verify couldn't find says so in red.
+- **Quotes:** folded under each value in a "N quotes" disclosure. Each quote shows the derived `loc` and, when `match_count` > 1, "also appears N× elsewhere". A quote Verify couldn't find says so in red. Number pills: "∉ quote" in amber, "∉ paper" in red. Following [Code checks in Verify](06-verify-code-checks.md), an ∉ paper miss also makes the field unsupported, and an ∉ quote miss makes it inferred, so each pill comes with that shading. The demo overlays didn't apply this.
 - **Equations:** `$$…$$` display math with their meaning. **Figures:** the PNG renders inline with the `why` text, and the caption collapses. An EPS figure shows "figure not renderable".
 - **Agent's opinion:** one dashed block that says it is the agent's judgement.
 - **Verdict bar:** fixed to the bottom of the screen, with relevance y/p/n, deep read (showing the agent's suggestion), a note and save.
