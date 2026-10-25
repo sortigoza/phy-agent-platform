@@ -1,0 +1,12 @@
+# Local runtime state (arXiv ToU: full texts stay local, never published)
+data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets and OS noise
+.env
+.DS_Store
