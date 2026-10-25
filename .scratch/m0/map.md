@@ -21,12 +21,11 @@ Every M0 build decision is locked, and M0 (SPEC §3) is cut into ordered, vertic
 - [OAI-PMH client: sickle or hand-rolled?](issues/03-oai-pmh-client.md): hand-rolled httpx + lxml (sickle is unmaintained and can't take our rate limiter); `from` is inclusive at UTC day level; errors come back as HTTP 200; the spec now records first_seen_datestamp instead of announced_date; fixtures are on branch `research/oai-pmh-client`.
 - [LaTeX flattening and detex tooling](issues/02-latex-flattening-tooling.md): our own ~100-line stdlib flattener (pandoc, pylatexenc and arxiv_latex_cleaner rejected); pypdfium2 for PDFs; the research recommends raw LaTeX as the canonical text, which the quote format ticket decides.
 - [Quote format: raw LaTeX or detexed prose?](issues/01-quote-format.md): quotes are raw flattened LaTeX (PDF → pypdfium2 text), matched through one shared `canonicalise()`; quotes are contiguous 5–60-word spans; Verify derives `loc` from the match instead of checking it; KaTeX renders quotes; a cheap caption-picked `key_figures` field is in M0.
+- [Card schema v1 and Read prompt v1](issues/04-card-schema-and-read-prompt-prototype.md): `CardDraft` (model output, quotes before value) plus a stored `Card`; the model marks `inferred`; opinions sit in one `opinion` block; soft list caps; `{{name}}` prompt placeholders; Read stays at `medium` effort. One real call cost $0.098 (27k in, 3k out) and surfaced a per-field number-grounding gap, now a Verify check; the code is on branch `prototype/card-schema-read-prompt`.
 
 ## Not yet specified
 
-- **How the Golden eval diff is shown** (CLI text or a UI page, and the granularity of a Card diff). This becomes clear once the Card shape from the Card schema prototype exists.
 - **Monitoring page layout and the SQL behind each tile.** It depends on the UI patterns from the review page prototype and on the database layer chosen in the code conventions ticket.
-- **Filter prompt v1 and its output schema.** It's small, but it should follow the prompt conventions the Card schema prototype sets.
 
 ## Out of scope
 

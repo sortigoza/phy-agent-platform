@@ -61,10 +61,10 @@ A passage quoted verbatim from the Paper version's source text, backing a Card f
 A figure of the Paper the agent judges worth seeing, chosen from its caption and shown on the Card.
 
 **Support**:
-Whether a Card field's Evidence backs its value: **supported**, **unsupported** (no verbatim quote, or the quote does not back the value), or **inferred**. Unsupported fields are shown, never hidden.
+Whether a Card field's Evidence backs its value: **supported**, **unsupported** (no verbatim quote, or the quote does not back the value), or **inferred** (the quote is verbatim, but the value follows from it rather than being stated in it: quotes combined, a number converted, a conclusion drawn). Unsupported fields are shown, never hidden.
 
 **Opinion field**:
-A Card field holding the agent's own judgement (flagged limitations, deep-read recommendation), always labelled as such and never mixed with the Paper's own claims.
+A Card field holding the agent's own judgement (flagged limitations, deep-read recommendation). Opinion fields are grouped in the Card's `opinion` block, always labelled as such and never mixed with the Paper's own claims.
 
 **Stale**:
 Describes a Card made from an older Paper version than the latest known. A Stale Card is re-carded only if its Review rated it relevant.

@@ -159,7 +159,7 @@ phy-agent-platform/
     └── runs/<run_id>.jsonl
 ```
 
-The Card schema is a Pydantic model in `src/phy/card.py`. It is the single source for the API's `output_config.format`, for validation, and for the UI. Its JSON Schema is exported to `schemas/card.schema.json` so diffs are visible.
+The Card schema lives in `src/phy/card.py` as two Pydantic models. `CardDraft` is what the model writes: it is the single source for the API's `output_config.format` and for validating the response. `Card` is what is stored: `CardDraft` plus the fields Verify adds (Support, `loc`, `match_count`). The UI renders `Card`. Both JSON Schemas are exported to `schemas/` so diffs are visible.
 
 ### SQLite tables
 
@@ -245,7 +245,10 @@ The result is `flattened.txt`: **raw flattened LaTeX**, never detexed (see the Q
 - The model reads this text, never the PDF itself. PDF-sourced Cards have no key figures.
 
 **The call.** One `claude-sonnet-5-5` call with `effort` set to `read.effort` (default `medium`). The output format is the Card schema.
-- The prompt is ordered for caching: a short shared system prompt, then the paper text with a cache breakpoint, then the Read instructions. M1's Verify reviewer reuses the same prefix, so it re-reads the paper from cache.
+- The prompt is ordered for caching: a short shared system prompt (`prompts/shared/<version>.md`), then the paper text with a cache breakpoint, then the Read instructions with the research questions filled in. M1's Verify reviewer reuses the same prefix, so it re-reads the paper from cache.
+- List caps (for example ≤ 5 key results) are stated in the prompt but not enforced by the schema, because the API ignores `maxItems` and a paid call should not fail over one extra item. Verify trims an over-cap list and logs a warning.
+
+**Prompt files.** Each `prompts/<stage>/<version>.md` starts with YAML front matter (`stage`, `version`, `system`, `model`, `effort`, `schema`, `params`, `notes`), followed by the body. Placeholders are `{{name}}`, never `$name`, because prompt text contains LaTeX `$`. A shared system prompt must stay byte-identical across every call that reuses its cached prefix.
 
 ### 7.4 Verify
 
@@ -256,8 +259,9 @@ The result is `flattened.txt`: **raw flattened LaTeX**, never detexed (see the Q
    - Math is otherwise left as written, and matching is case-sensitive. Every rule has a unit test from a real seed-paper snippet.
    - A quote must be one contiguous span of 5–60 words, with no ellipses, that doesn't cross a paragraph or section boundary.
 
-   If a quote is not found or breaks the shape rules, the field is `unsupported`. There are no exceptions.
+   If a quote is not found or breaks the shape rules, the field is `unsupported`. There are no exceptions. Otherwise the field is `inferred` if the model marked it so, and `supported` if not.
 2. **Invented numbers.** Every number in `key_results` values must appear in the canonicalised source text, with tolerant formatting (for example `1.2\times10^{-3}` matches `1.2e-3`). Any miss is a hard failure for that Card. The Card stays visible but carries a red badge.
+   - **Per field:** every number in any Fact's value must also appear in that Fact's own quotes. A value can otherwise carry parameters from elsewhere in the paper and still look supported. The failure status is decided in the Code checks in Verify ticket.
 3. **Locations are derived, not checked.** The model writes no Evidence `loc`. Verify computes it from the first match position.
    - It takes the enclosing section heading. Detection covers `\section`, `\subsection`, `\subsubsection`, `\paragraph`, `\appendix`, and preamble macros whose name or body contains `section`, such as `\ssection`.
    - It adds the `\label` key when the match is inside an equation, `figure` or `table` environment. On the PDF path it gives the page instead.
@@ -275,25 +279,32 @@ The Card is the product. Everything else exists to make Cards that are correct, 
 ```json
 {
   "tldr": "Two sentences: what they did and the main result.",
-  "questions": [{"id": "Q1", "why": "one line"}],
-  "system": {"value": "2D U(1) gauge theory, L=16..64", "evidence": [{"quote": "...", "loc": "Sec. \"Results\" · eq:tau", "match_count": 1}], "support": "supported"},
-  "method": {"value": "...", "evidence": [...], "support": "..."},
-  "baselines": {"value": "HMC, local Metropolis", "evidence": [...], "support": "..."},
-  "key_results": [{"value": "Integrated autocorrelation time reduced 10x at beta=6", "evidence": [...], "support": "..."}],
-  "claimed_advance": {"value": "...", "evidence": [...], "support": "..."},
-  "assumptions": [{"value": "...", "evidence": [...], "support": "..."}],
-  "key_equations": [{"latex": "...", "meaning": "...", "label": "eq:autocorr"}],
+  "key_results": [{"evidence": [{"quote": "...", "loc": "Sec. \"Results\" · fig:autocorr", "match_count": 1}], "value": "Integrated autocorrelation time reduced 10x at beta=6", "inferred": false, "support": "supported"}],
+  "assumptions": [{"evidence": [...], "value": "...", "inferred": false, "support": "..."}],
+  "system": {"evidence": [...], "value": "2D U(1) gauge theory, L=16..64", "inferred": false, "support": "..."},
+  "method": {"evidence": [...], "value": "...", "inferred": true, "support": "inferred"},
+  "baselines": {"evidence": [...], "value": "HMC, local Metropolis", "inferred": false, "support": "..."},
+  "claimed_advance": {"evidence": [...], "value": "...", "inferred": false, "support": "..."},
+  "limitations_stated": [{"evidence": [...], "value": "...", "support": "..."}],
+  "key_equations": [{"label": "eq:autocorr", "latex": "...", "meaning": "..."}],
   "key_figures": [{"label": "fig:autocorr", "why": "one line"}],
-  "limitations_stated": [{"value": "...", "evidence": [...]}],
-  "limitations_flagged": [{"value": "agent opinion, labelled as such"}],
-  "code_data": {"value": "GitHub link or none", "evidence": [...]},
-  "deep_read": {"recommend": true, "why": "one line"}
+  "code_data": null,
+  "questions": [{"id": "Q1", "why": "one line"}],
+  "opinion": {
+    "limitations_flagged": [{"value": "agent opinion"}],
+    "deep_read": {"recommend": true, "why": "one line"}
+  }
 }
 ```
 
+Caps: `key_results` 1–5, `assumptions` ≤ 4, `limitations_stated` ≤ 4, `key_equations` ≤ 3, `key_figures` ≤ 3, `questions` ≤ 4, `limitations_flagged` ≤ 3, and 1–2 Evidence quotes per field.
+
 **Rules:**
 - Results keep their numbers, units and error bars exactly as the paper states them. No rounding.
-- Opinion fields are never mixed with the paper's own claims.
+- Field order is generation order. Inside a field the model writes its quotes first, then the value.
+- Opinion fields are never mixed with the paper's own claims. They all live in the one `opinion` object, shown as "Agent's opinion".
+- `baselines` and `code_data` are `null` when the paper has none. Null is not unsupported, and is not shaded.
+- `inferred` is set by the model when the value follows from its quotes but isn't stated in them. Rewording alone is not inferred. Every number or parameter in a value must appear in that field's quotes, or the field is inferred.
 - Quotes are copied character for character from `flattened.txt`, LaTeX included. Evidence `loc` and `match_count` are filled in by Verify, not by the model. `loc` is the section heading plus the enclosing `\label`, for LaTeX, or the page, for PDF.
 - Key figures are chosen from captions (the model never sees pixels) and resolved by code to the `\includegraphics` file in the downloaded source.
 - Every Card records its arXiv version, model, prompt version and schema version.
@@ -402,7 +413,7 @@ The Batch API halves both prices. Cache reads are discounted.
 | Stage | Volume per week | Input each | Output each | Weekly cost (sync) |
 | --- | --- | --- | --- | --- |
 | Filter | about 250 Candidates (week 1 measures the real number) | about 2k tokens | 0.2k | about $0.08 |
-| Read | ≤ 40 | about 80k | 5k | about $8.40 |
+| Read | ≤ 40 | about 80k (1904.12072 measured 27k) | 5k (measured 3k) | about $8.40 (1904.12072 measured $0.10 per Card) |
 | Golden eval (4 Dev Papers) | per change | about 80k | 5k | about $0.85 per eval |
 | Verify reviewer (M1) | ≤ 40 | about 60k, mostly cached | 3k | about $2 |
 

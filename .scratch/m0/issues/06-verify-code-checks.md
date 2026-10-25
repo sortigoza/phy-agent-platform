@@ -14,3 +14,11 @@ What exactly do the code checks in Verify do? Decide them against the prototype 
 ## Context
 
 Already decided by [Quote format](01-quote-format.md): the canonicaliser rules, the quote shape (contiguous, 5–60 words, no ellipses) and that `loc` is computed rather than checked. What remains is number tolerance, the derivation details and the failure statuses.
+
+From [Card schema v1 and Read prompt v1](04-card-schema-and-read-prompt-prototype.md), also decide:
+- the **per-field number check**: each number in a Fact's value must appear in that Fact's own quotes. Its tolerance, and the status it gives (`inferred`, `unsupported`, or a badge);
+- how **over-cap lists** are trimmed (keep the first N) and where the warning is shown;
+- the **raw ↔ canonical offset mapping** `loc` needs. The prototype's rough locator put one quote in "front matter", because `~\ref{…}` disappears under canonicalisation.
+
+The prototype Card to decide against is `out/card.json` on branch `prototype/card-schema-read-prompt`. Its rough checks are in `verify.py` there.
+

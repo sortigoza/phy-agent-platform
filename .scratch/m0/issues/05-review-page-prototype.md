@@ -18,3 +18,11 @@ Can a Card be reviewed in about 4 minutes on the `/review` page? Build a rough F
 - a timer.
 
 Settle the layout, how Flags are entered, keyboard shortcuts, and the page conventions that `/monitor` and `/runs/<id>` will reuse.
+
+## Context
+
+Build from the real prototype Card, `out/card.json` on branch `prototype/card-schema-read-prompt` (the source is in `src_1904.12072/` there, gitignored, and needs a re-download). From [Card schema v1 and Read prompt v1](04-card-schema-and-read-prompt-prototype.md):
+- Support has three states to shade: supported, `inferred` (its own shading) and unsupported;
+- the `opinion` object is shown as one "Agent's opinion" block;
+- a null `baselines` or `code_data` means "none" and is not shaded.
+
