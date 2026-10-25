@@ -135,6 +135,7 @@ def load_card(demo: bool) -> tuple[dict, dict]:
     meta = {
         "arxiv_id": "1904.12072",
         "version": "v2",
+        "authors": "Albergo, Kanwar, Shanahan",  # from OAI-PMH metadata in the real app
         "title": "Flow-based generative models for Markov chain Monte Carlo in lattice field theory",
         "status": "verified",
         "stale_note": None,

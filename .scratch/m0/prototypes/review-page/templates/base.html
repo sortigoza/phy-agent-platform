@@ -15,11 +15,12 @@
 <body class="variant-{{ variant }}" data-variant="{{ variant }}" data-variants="{{ variants|join(',') }}">
 
 {# --- shared page convention: one top bar for /review, /monitor, /runs --- #}
+<div class="stick">
 <header class="topbar">
   <nav><b>phy</b> <a class="on" href="/review">review</a> <a href="#">monitor</a> <a href="#">runs</a></nav>
   <div class="paper">
     <a href="https://arxiv.org/abs/{{ meta.arxiv_id }}" target="_blank">{{ meta.arxiv_id }}{{ meta.version }}</a>
-    <span class="title">{{ meta.title }}</span>
+    <span class="authors">{{ meta.authors }}</span> · <span class="title">{{ meta.title }}</span>
   </div>
   <div class="badges">
     {% if meta.status == 'stale' %}<span class="badge stale" title="{{ meta.stale_note }}">Stale</span>{% endif %}
@@ -31,6 +32,8 @@
   <div class="timer" id="timer" title="Review time. Amber at 4:00, red at 5:00.">0:00</div>
 </header>
 {% if meta.stale_note %}<div class="stalebar">Stale: {{ meta.stale_note }}. Rated yes/partly → re-Read is queued.</div>{% endif %}
+{% block subbar %}{% endblock %}
+</div>
 
 {% block body %}{% endblock %}
 
@@ -45,6 +48,7 @@
     <tr><td>j / k</td><td>next / previous field</td></tr>
     <tr><td>o</td><td>open / close the focused field's quotes</td></tr>
     <tr><td>f</td><td>Flag the focused field, then 1–4 picks the kind, type a note, Enter saves, Esc cancels</td></tr>
+    <tr><td>[ / ]</td><td>previous / next section</td></tr>
     <tr><td>x</td><td>(C) mark the focused field ok and move on</td></tr>
     <tr><td>y / p / n</td><td>relevance: yes / partly / no</td></tr>
     <tr><td>d</td><td>toggle deep read</td></tr>

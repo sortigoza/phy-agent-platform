@@ -121,6 +121,28 @@ function updateProgress() {
 }
 const curStep = () => +($(".step:not([hidden])")?.dataset.step ?? 0);
 
+// --- A: section nav with scroll-spy
+const secs_ = () => $$(".doc section[id^=sec-]");
+function curSec() {
+  const top = $(".stick").offsetHeight + 12;
+  let i = 0;
+  secs_().forEach((s, j) => { if (s.getBoundingClientRect().top <= top) i = j; });
+  return i;
+}
+function showSec(i) {
+  const s = secs_()[i];
+  if (!s) return;
+  s.scrollIntoView({ block: "start" });
+  focusField($("[data-field]", s));
+}
+function jumpSec(d) { if (V === "A") showSec(Math.max(0, Math.min(secs_().length - 1, curSec() + d))); }
+if (V === "A") {
+  const spy = () => $$(".secnav li").forEach((l, j) => l.classList.toggle("on", j === curSec()));
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("load", spy);
+  document.addEventListener("click", (e) => { const l = e.target.closest("[data-sec]"); if (l) showSec(+l.dataset.sec); });
+}
+
 // --- variants (PROTOTYPE switcher)
 function cycle(d) {
   const i = (VS.indexOf(V) + d + VS.length) % VS.length;
@@ -162,7 +184,8 @@ document.addEventListener("keydown", (e) => {
     "?": () => ($("#help").hidden = !$("#help").hidden),
     Escape: () => ($("#help").hidden = true),
     ArrowLeft: () => cycle(-1), ArrowRight: () => cycle(1),
-    "]": () => V === "C" && goto(curStep() + 1), "[": () => V === "C" && goto(curStep() - 1),
+    "]": () => (V === "C" ? goto(curStep() + 1) : jumpSec(1)),
+    "[": () => (V === "C" ? goto(curStep() - 1) : jumpSec(-1)),
   }[e.key];
   if (act) { e.preventDefault(); act(); }
 });

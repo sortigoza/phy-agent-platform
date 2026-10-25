@@ -1,10 +1,17 @@
 {% extends "base.html" %}
 {% import "_macros.html" as m %}
-{# A · Document: one column, read top to bottom. Quotes collapsed. Verdict in a sticky bar. #}
+{# A · Document: one column, read top to bottom. Quotes collapsed. Section nav under the top bar, verdict in a sticky bar. #}
+{% block subbar %}
+<ol class="stepper secnav">
+  {% for name, fs in sections %}<li data-sec="{{ loop.index0 }}">{{ name }}
+    {%- set n_uns = fs|selectattr('support', 'equalto', 'unsupported')|list|length %}
+    {%- if n_uns %} <small class="secuns">{{ n_uns }}</small>{% endif %}</li>{% endfor %}
+</ol>
+{% endblock %}
 {% block body %}
 <main class="doc">
   {% for name, fs in sections %}
-  <section class="{{ 'opinion' if name == "Agent's opinion" }}">
+  <section class="{{ 'opinion' if name == "Agent's opinion" }}" id="sec-{{ loop.index0 }}">
     <h2>{{ name }}{% if name == "Agent's opinion" %} <small>the agent's judgement, not the paper's claims</small>{% endif %}</h2>
     {% for f in fs %}
     <div class="field s-{{ f.support }}" data-field id="{{ m.fid(f) }}">

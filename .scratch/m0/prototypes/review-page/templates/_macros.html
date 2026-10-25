@@ -1,11 +1,11 @@
 {% macro fid(f) %}f-{{ f.path|replace('[','-')|replace(']','')|replace('.','-') }}{% endmacro %}
 
-{% macro support_tag(f) %}
+{% macro support_tag(f) %}<span class="tags">
   {% if f.support == 'inferred' %}<span class="tag inf">inferred</span>
   {% elif f.support == 'unsupported' %}<span class="tag uns">unsupported</span>{% endif %}
   {% for n, where in f.numbers %}<span class="tag {{ 'numq' if where == 'quote' else 'nump' }}"
      title="{{ 'not in this field’s quotes' if where == 'quote' else 'not anywhere in the paper' }}">{{ n }} {{ '∉ quote' if where == 'quote' else '∉ paper' }}</span>{% endfor %}
-{% endmacro %}
+</span>{% endmacro %}
 
 {% macro quote(q) %}
   <blockquote class="quote{{ ' notfound' if not q.found }}">
