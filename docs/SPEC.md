@@ -231,14 +231,15 @@ A Paper that passes is a Candidate.
 
 **Fetching source.** Read fetches `arxiv.org/src/<id>v<n>` through the shared rate limiter and detects the format from magic bytes: gzip then tar, a single gzipped `.tex`, or a PDF.
 
-**Flattening LaTeX.**
-- Find the main file (the one containing `\documentclass`).
-- Inline `\input` and `\include` recursively, and strip comments.
-- Keep the appendices and drop the bibliography.
+**Flattening LaTeX.** Read uses a small stdlib flattener of our own, not pandoc or pylatexenc (see the LaTeX tooling ticket in the M0 map). It:
+- finds the main file from the `00README` toplevel declaration, falling back to the uncommented `\documentclass` file;
+- inlines `\input` and `\include` recursively, both braced and brace-less;
+- strips `%` comments, `comment` environments, `\iffalse` blocks, and anything after `\end{document}`;
+- drops the bibliography but keeps anything that follows it, such as appendices placed after it.
 
 The result is `flattened.txt`. It is the text the model reads and the text Verify checks against.
 
-**PDF fallback.** If there is no LaTeX source, text is extracted from the PDF, and the Card records `source_type=pdf`. Locations then become page numbers.
+**PDF fallback.** If there is no LaTeX source, text is extracted with `pypdfium2` (soft hyphens stripped), and the Card records `source_type=pdf`. Locations then become page numbers.
 
 **The call.** One `claude-sonnet-5-5` call with `effort` set to `read.effort` (default `medium`). The output format is the Card schema.
 - The prompt is ordered for caching: a short shared system prompt, then the paper text with a cache breakpoint, then the Read instructions. M1's Verify reviewer reuses the same prefix, so it re-reads the paper from cache.
