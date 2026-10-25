@@ -1,7 +1,7 @@
 # Filter
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 03, 08
 
 ## Goal

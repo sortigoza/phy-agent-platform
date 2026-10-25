@@ -105,6 +105,7 @@ def test_a_stored_card_adds_the_verify_fields():
         {
             "value": "2D only",
             "support": "unsupported",
+            "ungrounded_numbers": [],
             "evidence": [{"quote": "q" * 30, "found": False, "loc": None, "match_count": 0}],
         }
     ]

@@ -281,15 +281,26 @@ def write_verified_card(
     card_json: str,
     unsupported_count: int,
     inferred_count: int,
+    invented_numbers_json: str,
+    warnings_json: str,
 ) -> None:
     """Store what Verify made of a Card. A draft (or re-verified) Card becomes `verified`; a
     reviewed or stale one keeps its status."""
     with conn:
         conn.execute(
             "UPDATE cards SET card_json = ?, unsupported_count = ?, inferred_count = ?,"
+            " invented_numbers_json = ?, warnings_json = ?,"
             " status = CASE WHEN status IN ('draft', 'verified') THEN 'verified' ELSE status END,"
             " updated_at = ? WHERE id = ?",
-            (card_json, unsupported_count, inferred_count, _now(), card_id),
+            (
+                card_json,
+                unsupported_count,
+                inferred_count,
+                invented_numbers_json,
+                warnings_json,
+                _now(),
+                card_id,
+            ),
         )
 
 

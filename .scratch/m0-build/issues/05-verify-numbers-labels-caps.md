@@ -1,7 +1,7 @@
 # Verify: numbers, labels and caps
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 04
 
 ## Goal

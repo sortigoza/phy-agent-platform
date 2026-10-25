@@ -48,7 +48,7 @@ scope_notes:                       # prose rules the Filter model applies; keywo
 ```sh
 uv run phy golden add 1904.12072 --split dev   # freeze source, draft a Placeholder reference card
 uv run phy read --paper 1904.12072             # card one paper, bypassing Watch/Filter/quota
-uv run phy verify                              # check every draft Card's quotes, set Support and loc
+uv run phy verify                              # check every draft Card's quotes and numbers, set Support and loc
 uv run phy ui                                  # open http://127.0.0.1:8000/review
 ```
 
