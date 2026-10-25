@@ -1,0 +1,12 @@
+{
+  "model": "claude-sonnet-5-5",
+  "schema_version": "card/v1-proto",
+  "prompt_version": "read/v1",
+  "counted_input_tokens": 24582,
+  "input_tokens": 1348,
+  "output_tokens": 3074,
+  "cache_creation_input_tokens": 25932,
+  "cache_read_input_tokens": 0,
+  "cost_usd": 0.0983,
+  "response_id": "msg_011CgNrtbZvZPaWokJrNurXA"
+}
