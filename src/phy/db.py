@@ -341,6 +341,7 @@ def get_screening(conn: sqlite3.Connection, arxiv_id: str, version: int) -> sqli
 
 def write_screening(
     conn: sqlite3.Connection,
+    *,
     arxiv_id: str,
     version: int,
     prefilter: str,

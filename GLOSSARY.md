@@ -38,7 +38,7 @@ _Avoid_: article, preprint
 One numbered release of a Paper (v1, v2, ...). A Card is always made from, and its Evidence checked against, one specific Paper version.
 
 **Candidate**:
-A Paper that passed the pre-filter and goes on to be scored against the research questions.
+A Paper that passed the pre-filter, or skipped it because one of its sets has pre-filter `none`, and goes on to be scored against the research questions.
 
 **Screened in**:
 A Candidate whose best score across the research questions reaches the relevance threshold.
