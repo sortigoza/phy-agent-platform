@@ -65,9 +65,18 @@ The first harvest pulls about 14 days of metadata at 1 request every 3 s. Expect
 
 ## 5. Schedule it
 
+The schedule runs a **Release**, a tagged version, from its own checkout at `$PHY_HOME/app`, so work in progress in your clone never runs at 06:00. Cut one first:
+
 ```sh
-uv run phy schedule install          # writes + loads ~/Library/LaunchAgents/phy.daily.plist
+git tag -a v0.1.0 -m "First release"  # on main; phy never tags
+uv run phy schedule install          # checks out the newest Release in $PHY_HOME/app, writes + loads ~/Library/LaunchAgents/phy.daily.plist
 uv run phy schedule status
+```
+
+When you tag a newer Release, the UI top bar shows "update available", and so does `phy status`. Install it when you choose:
+
+```sh
+uv run phy schedule update           # refuses a downgrade; does nothing while a run holds the lock
 ```
 
 The job runs at 06:00 and at login.

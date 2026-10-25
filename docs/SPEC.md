@@ -124,7 +124,9 @@ A Paper that appears in several sets gets the most permissive pre-filter of thos
 **Installation home.** All instance state lives in `$PHY_HOME` (default `~/.phy-agent-platform`, overridden by the `PHY_HOME` env var), not in the repo, so the clone location doesn't matter. `config.py` resolves it once into a `Paths` object; no other module has path literals. See §6.
 
 **Scheduling.** A launchd agent runs `phy daily`, which executes Watch → Filter → Read → Verify in order.
-- `phy schedule install` writes the plist with `StartCalendarInterval` at 06:00 plus `RunAtLoad`, the absolute path to `uv` (launchd's PATH is bare and it never reads shell profiles), `WorkingDirectory` set to the repo, `PHY_HOME` in `EnvironmentVariables` (never a secret), and `StandardErrorPath` at `$PHY_HOME/logs/launchd.err` for crashes before logging starts.
+- Unattended runs execute a **Release**, never the dev clone, so half-finished code is never run at 06:00. A Release is an annotated tag `vMAJOR.MINOR.PATCH` on `main` that the Reader creates; phy never tags. The newest is `git tag --list 'v*' --sort=-v:refname`, ignoring pre-release tags. `phy schedule install` refuses when no Release exists; otherwise it checks the newest one out as a detached `git worktree` at `$PHY_HOME/app` (ignored by `$PHY_HOME/.gitignore`) and runs `uv sync` there.
+- When a newer Release exists, the top bar of every UI page shows an amber "update available" badge listing the commits, `phy status` prints one line, and `phy daily` logs one INFO `schedule.update_available` event. It is never a red tile. The check is local: the worktree shares the dev repo's tags. `phy schedule update` takes `phy.lock`, refuses a downgrade, checks out the newest Release in the worktree and runs `uv sync`; migrations apply on the next connect.
+- `phy schedule install` writes the plist with `StartCalendarInterval` at 06:00 plus `RunAtLoad`, the absolute path to `uv` (launchd's PATH is bare and it never reads shell profiles), `WorkingDirectory` set to `$PHY_HOME/app`, `PHY_HOME` in `EnvironmentVariables` (never a secret), and `StandardErrorPath` at `$PHY_HOME/logs/launchd.err` for crashes before logging starts.
 - If the Mac was asleep at 06:00, the run starts on wake. Several missed slots collapse into one run.
 - If the Mac was shut down, the run happens at login.
 - A second run on the same day is harmless.
@@ -170,6 +172,7 @@ $PHY_HOME/                      # ~/.phy-agent-platform by default; a local git 
 ├── CHANGELOG.md                # accepted changes (Meta-work)
 ├── .gitignore                  # ignores everything below this line (arXiv ToU)
 ├── phy.db  phy.lock  arxiv.lock
+├── app/                        # the installed Release: a detached git worktree of the repo
 ├── papers/<arxiv_id>v<n>/      # raw download + flattened.txt
 ├── golden_sources/<arxiv_id>v<n>/  # frozen, never re-fetched
 ├── runs/<run_id>.jsonl

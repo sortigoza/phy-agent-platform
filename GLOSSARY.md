@@ -24,6 +24,10 @@ _Avoid_: metric (when meaning a thresholded signal with an action)
 **Meta-work**:
 Changing prompts, parsers, schemas or config in response to Flags and Instruments, accepted only if the Golden set does not regress, plus crafting the Golden set itself. Fixing the system, not the output.
 
+**Release**:
+A tagged version of the platform's code that unattended runs execute. The Reader cuts a Release and chooses when to install it; code that is not yet released never runs unattended.
+_Avoid_: deploy, build
+
 ### Papers and the funnel
 
 **Paper**:
