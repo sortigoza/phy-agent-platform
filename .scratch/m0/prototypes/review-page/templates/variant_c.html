@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{# C · Triage deck: one section per step, quotes open. Every field gets ok (x) or a Flag (f). Verdict is the last step. #}
+{% block body %}
+<ol class="stepper">
+  {% for name, fs in sections %}<li data-goto="{{ loop.index0 }}">{{ name }} <small class="prog" data-prog="{{ loop.index0 }}">0/{{ fs|length }}</small></li>{% endfor %}
+  <li data-goto="{{ sections|length }}">Verdict</li>
+</ol>
+<main class="deck">
+  {% for name, fs in sections %}
+  <section class="step{{ ' opinion' if name == "Agent's opinion" }}" data-step="{{ loop.index0 }}" {{ 'hidden' if not loop.first }}>
+    <h2>{{ name }}</h2>
+    {% for f in fs %}
+    <div class="tcard s-{{ f.support }}" data-field id="{{ m.fid(f) }}">
+      <div class="thead"><b>{{ f.label }}</b> {{ m.support_tag(f) }}
+        <span class="tbtns"><button type="button" class="okbtn" title="ok (x)">✓ ok</button>{{ m.flag_button(f) }}</span></div>
+      <div class="tval">{{ m.value(f) }}</div>
+      {% for q in f.evidence %}{{ m.quote(q) }}{% endfor %}
+      {{ m.chips(f, flags_by_path, flag_kinds) }}
+      {{ m.flag_form(f, flag_kinds) }}
+    </div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+  <section class="step" data-step="{{ sections|length }}" hidden>
+    <h2>Verdict</h2>
+    <p class="tldr-recap">{{ fields[0].value_html|safe }}</p>
+    {{ m.verdict(card) }}
+  </section>
+</main>
+{% endblock %}

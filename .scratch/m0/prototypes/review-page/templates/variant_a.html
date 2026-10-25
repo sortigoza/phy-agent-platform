@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{# A · Document: one column, read top to bottom. Quotes collapsed. Verdict in a sticky bar. #}
+{% block body %}
+<main class="doc">
+  {% for name, fs in sections %}
+  <section class="{{ 'opinion' if name == "Agent's opinion" }}">
+    <h2>{{ name }}{% if name == "Agent's opinion" %} <small>the agent's judgement, not the paper's claims</small>{% endif %}</h2>
+    {% for f in fs %}
+    <div class="field s-{{ f.support }}" data-field id="{{ m.fid(f) }}">
+      <div class="flabel">{{ f.label }}<br>{{ m.support_tag(f) }}</div>
+      <div class="fvalue">
+        {{ m.value(f) }}
+        {% if f.evidence %}
+        <details class="ev"><summary>{{ f.evidence|length }} quote{{ 's' if f.evidence|length > 1 }}{% if f.evidence|selectattr('found', 'false')|list %} · not found{% endif %}</summary>
+          {% for q in f.evidence %}{{ m.quote(q) }}{% endfor %}
+        </details>
+        {% endif %}
+        {{ m.chips(f, flags_by_path, flag_kinds) }}
+        {{ m.flag_form(f, flag_kinds) }}
+      </div>
+      <div class="fact">{{ m.flag_button(f) }}</div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</main>
+<div class="stickybar">{{ m.verdict(card) }}</div>
+{% endblock %}

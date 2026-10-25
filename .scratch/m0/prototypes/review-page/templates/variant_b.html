@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{# B · Split pane: scan every field on the left; the focused field's evidence, figures and Flag on the right. #}
+{% block body %}
+<div class="verdictbar">{{ m.verdict(card) }}</div>
+<div class="split">
+  <nav class="list">
+    {% for name, fs in sections %}
+    <div class="lsec{{ ' opinion' if name == "Agent's opinion" }}">{{ name }}</div>
+    {% for f in fs %}
+    <div class="row s-{{ f.support }}" data-field data-detail="d-{{ m.fid(f) }}" id="{{ m.fid(f) }}">
+      <span class="rlabel">{{ f.label }}</span>
+      <span class="rval">{% if f.kind == 'figure' or f.kind == 'equation' %}{{ f.value_html|safe }}{% else %}{{ m.value(f) }}{% endif %}</span>
+      <span class="rtags">{{ m.support_tag(f) }}<span class="flagdot" hidden>⚑</span></span>
+    </div>
+    {% endfor %}
+    {% endfor %}
+  </nav>
+  <section class="detail">
+    {% for f in fields %}
+    <div class="dpane s-{{ f.support }}{{ ' opinion' if f.section == "Agent's opinion" }}" id="d-{{ m.fid(f) }}" hidden>
+      <div class="dhead"><span class="dsec">{{ f.section }}</span> <h3>{{ f.label }}</h3> {{ m.support_tag(f) }}</div>
+      <div class="dval">{{ m.value(f) }}</div>
+      {% if f.evidence %}<h4>Evidence</h4>{% for q in f.evidence %}{{ m.quote(q) }}{% endfor %}
+      {% elif f.kind == 'fact' or f.kind == 'none' %}<p class="muted">null: the paper has none, nothing to verify.</p>
+      {% elif f.kind == 'opinion' %}<p class="muted">Opinion: no quotes by design.</p>{% endif %}
+      <h4>Flag</h4>
+      {{ m.chips(f, flags_by_path, flag_kinds) }}
+      <form class="flagform inline" hx-post="/flags" hx-target="#chips-{{ m.fid(f) }}" hx-swap="outerHTML"
+            hx-on::after-request="this.reset()">
+        <input type="hidden" name="field_path" value="{{ f.path }}">
+        {% for k, label in flag_kinds.items() %}
+          <label><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if loop.first }}><kbd>{{ loop.index }}</kbd> {{ label }}</label>
+        {% endfor %}
+        <input type="text" name="note" placeholder="note (optional), Enter saves">
+      </form>
+    </div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

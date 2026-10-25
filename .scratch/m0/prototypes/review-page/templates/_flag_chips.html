@@ -1,0 +1,6 @@
+<span class="chips" id="chips-{{ 'f-' ~ path|replace('[','-')|replace(']','')|replace('.','-') }}">
+  {%- for fl in flags %}<span class="chip" title="{{ fl.note }}">⚑ {{ flag_kinds[fl.kind] }}{% if fl.note %}: {{ fl.note }}{% endif %}</span>{% endfor -%}
+  {%- if flags %}<button class="clr" hx-post="/flags/clear" hx-vals='{"field_path": "{{ path }}"}'
+     hx-target="closest .chips" hx-swap="outerHTML">×</button>{% endif -%}
+</span>
+{% if oob %}<pre id="state" hx-swap-oob="true">{{ state }}</pre>{% endif %}

@@ -1,0 +1,2 @@
+<span class="savedmsg">saved: {{ r.relevance }}, deep read {{ 'yes' if r.deep_read else 'no' }}, {{ r.seconds_spent // 60 }}:{{ '%02d' % (r.seconds_spent % 60) }}. Next Card →</span>
+<pre id="state" hx-swap-oob="true">{{ state }}</pre>

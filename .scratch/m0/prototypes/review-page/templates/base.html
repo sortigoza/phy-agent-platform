@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review · {{ meta.arxiv_id }} · PROTOTYPE {{ variant }}</title>
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/static/app.css">
+<script>window.KATEX_MACROS = {{ macros|safe }};</script>
+<script defer src="/static/app.js"></script>
+</head>
+<body class="variant-{{ variant }}" data-variant="{{ variant }}" data-variants="{{ variants|join(',') }}">
+
+{# --- shared page convention: one top bar for /review, /monitor, /runs --- #}
+<header class="topbar">
+  <nav><b>phy</b> <a class="on" href="/review">review</a> <a href="#">monitor</a> <a href="#">runs</a></nav>
+  <div class="paper">
+    <a href="https://arxiv.org/abs/{{ meta.arxiv_id }}" target="_blank">{{ meta.arxiv_id }}{{ meta.version }}</a>
+    <span class="title">{{ meta.title }}</span>
+  </div>
+  <div class="badges">
+    {% if meta.status == 'stale' %}<span class="badge stale" title="{{ meta.stale_note }}">Stale</span>{% endif %}
+    {% if n_numbers %}<span class="badge num">{{ n_numbers }} number{{ 's' if n_numbers > 1 }} not grounded</span>{% endif %}
+    <span class="badge sup">{{ counts.supported }} supported</span>
+    <span class="badge inf">{{ counts.inferred }} inferred</span>
+    <span class="badge uns{{ ' zero' if not counts.unsupported }}">{{ counts.unsupported }} unsupported</span>
+  </div>
+  <div class="timer" id="timer" title="Review time. Amber at 4:00, red at 5:00.">0:00</div>
+</header>
+{% if meta.stale_note %}<div class="stalebar">Stale: {{ meta.stale_note }}. Rated yes/partly → re-Read is queued.</div>{% endif %}
+
+{% block body %}{% endblock %}
+
+<aside class="statepanel" id="statepanel">
+  <div class="sp-head">in-memory state <button hx-post="/reset">reset</button></div>
+  <pre id="state">{{ state }}</pre>
+</aside>
+
+<div class="help" id="help" hidden>
+  <h3>Keys</h3>
+  <table>
+    <tr><td>j / k</td><td>next / previous field</td></tr>
+    <tr><td>o</td><td>open / close the focused field's quotes</td></tr>
+    <tr><td>f</td><td>Flag the focused field, then 1–4 picks the kind, type a note, Enter saves, Esc cancels</td></tr>
+    <tr><td>x</td><td>(C) mark the focused field ok and move on</td></tr>
+    <tr><td>y / p / n</td><td>relevance: yes / partly / no</td></tr>
+    <tr><td>d</td><td>toggle deep read</td></tr>
+    <tr><td>s</td><td>save the Review</td></tr>
+    <tr><td>r</td><td>show raw LaTeX everywhere</td></tr>
+    <tr><td>`</td><td>show / hide the state panel</td></tr>
+    <tr><td>← / →</td><td>prototype variant</td></tr>
+  </table>
+</div>
+
+{# --- PROTOTYPE switcher, not part of the design --- #}
+<div class="switcher">
+  <button data-cycle="-1">◀</button>
+  <span>{{ variant }} ({{ variants[variant] }}){% if demo %} · demo states{% endif %}</span>
+  <button data-cycle="1">▶</button>
+  <a href="?variant={{ variant }}&demo={{ 0 if demo else 1 }}">{{ 'real Card' if demo else 'demo states' }}</a>
+  <span class="hint">? keys</span>
+</div>
+</body>
+</html>
