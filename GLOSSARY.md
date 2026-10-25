@@ -55,7 +55,10 @@ _Avoid_: summary, note
 One named part of a Card (system, method, key result, ...). A factual Card field carries a value, its Evidence, and its Support.
 
 **Evidence**:
-A passage quoted verbatim from the Paper version's source text, plus its location (section or equation), backing a Card field's value.
+A passage quoted verbatim from the Paper version's source text, backing a Card field's value. Its location (section and label, or page) is where the quote was found in the source, never the agent's claim about where it is.
+
+**Key figure**:
+A figure of the Paper the agent judges worth seeing, chosen from its caption and shown on the Card.
 
 **Support**:
 Whether a Card field's Evidence backs its value: **supported**, **unsupported** (no verbatim quote, or the quote does not back the value), or **inferred**. Unsupported fields are shown, never hidden.

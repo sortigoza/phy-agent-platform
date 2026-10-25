@@ -237,9 +237,12 @@ A Paper that passes is a Candidate.
 - strips `%` comments, `comment` environments, `\iffalse` blocks, and anything after `\end{document}`;
 - drops the bibliography but keeps anything that follows it, such as appendices placed after it.
 
-The result is `flattened.txt`. It is the text the model reads and the text Verify checks against.
+The result is `flattened.txt`: **raw flattened LaTeX**, never detexed (see the Quote format ticket in the M0 map). It is the text the model reads and quotes from, and the text Verify checks against.
 
-**PDF fallback.** If there is no LaTeX source, text is extracted with `pypdfium2` (soft hyphens stripped), and the Card records `source_type=pdf`. Locations then become page numbers.
+**PDF fallback.** If there is no LaTeX source, text is extracted with `pypdfium2` into `flattened.txt`, and the Card records `source_type=pdf`.
+- Soft hyphens (U+FFFE, U+00AD) are stripped, hyphenated line breaks joined and NFKC applied.
+- Pages are separated by `\f`, and locations become page numbers.
+- The model reads this text, never the PDF itself. PDF-sourced Cards have no key figures.
 
 **The call.** One `claude-sonnet-5-5` call with `effort` set to `read.effort` (default `medium`). The output format is the Card schema.
 - The prompt is ordered for caching: a short shared system prompt, then the paper text with a cache breakpoint, then the Read instructions. M1's Verify reviewer reuses the same prefix, so it re-reads the paper from cache.
@@ -248,9 +251,18 @@ The result is `flattened.txt`. It is the text the model reads and the text Verif
 
 **M0 code checks** (deterministic, free):
 
-1. **Verbatim quotes.** Each Evidence quote is matched against `flattened.txt` after normalising whitespace, Unicode quotes and dashes, and LaTeX spacing commands such as `~`, `\,` and `\ `. If a quote is not found, the field is `unsupported`. There are no exceptions.
-2. **Invented numbers.** Every number in `key_results` values must appear in the source text, with tolerant formatting (for example `1.2\times10^{-3}` matches `1.2e-3`). Any miss is a hard failure for that Card. The Card stays visible but carries a red badge.
-3. **Locations.** Each `loc` must name a section or equation that exists in the source. A failure produces a warning, not a change of Support.
+1. **Verbatim quotes.** One function, `canonicalise(text, source_type)`, is the matching contract for both source types. It runs identically on the quote and on `flattened.txt`, and a quote is found if canonical(quote) is a substring of canonical(source).
+   - For LaTeX it removes `\cite`/`\citep`/`\citet`/`\ref`/`\eqref`/`\label` (with any `~` before them), maps `\% \& \$` to the plain characters, unwraps `\emph`/`\textit`/`\textbf`/`\text`, maps quotes and dashes to one form, maps `~ \, \ \;` to a space, and collapses whitespace.
+   - Math is otherwise left as written, and matching is case-sensitive. Every rule has a unit test from a real seed-paper snippet.
+   - A quote must be one contiguous span of 5–60 words, with no ellipses, that doesn't cross a paragraph or section boundary.
+
+   If a quote is not found or breaks the shape rules, the field is `unsupported`. There are no exceptions.
+2. **Invented numbers.** Every number in `key_results` values must appear in the canonicalised source text, with tolerant formatting (for example `1.2\times10^{-3}` matches `1.2e-3`). Any miss is a hard failure for that Card. The Card stays visible but carries a red badge.
+3. **Locations are derived, not checked.** The model writes no Evidence `loc`. Verify computes it from the first match position.
+   - It takes the enclosing section heading. Detection covers `\section`, `\subsection`, `\subsubsection`, `\paragraph`, `\appendix`, and preamble macros whose name or body contains `section`, such as `\ssection`.
+   - It adds the `\label` key when the match is inside an equation, `figure` or `table` environment. On the PDF path it gives the page instead.
+   - Equation numbers are not computed. Verify also stores `match_count`.
+   - `key_equations` and `key_figures` carry `\label` keys. A key that doesn't exist in the source produces a warning.
 
 After these checks the Card's status becomes `verified`, and `unsupported_count` is stored.
 
@@ -264,13 +276,14 @@ The Card is the product. Everything else exists to make Cards that are correct, 
 {
   "tldr": "Two sentences: what they did and the main result.",
   "questions": [{"id": "Q1", "why": "one line"}],
-  "system": {"value": "2D U(1) gauge theory, L=16..64", "evidence": [{"quote": "...", "loc": "Sec. 2"}], "support": "supported"},
+  "system": {"value": "2D U(1) gauge theory, L=16..64", "evidence": [{"quote": "...", "loc": "Sec. \"Results\" · eq:tau", "match_count": 1}], "support": "supported"},
   "method": {"value": "...", "evidence": [...], "support": "..."},
   "baselines": {"value": "HMC, local Metropolis", "evidence": [...], "support": "..."},
   "key_results": [{"value": "Integrated autocorrelation time reduced 10x at beta=6", "evidence": [...], "support": "..."}],
   "claimed_advance": {"value": "...", "evidence": [...], "support": "..."},
   "assumptions": [{"value": "...", "evidence": [...], "support": "..."}],
-  "key_equations": [{"latex": "...", "meaning": "...", "loc": "Eq. (7)"}],
+  "key_equations": [{"latex": "...", "meaning": "...", "label": "eq:autocorr"}],
+  "key_figures": [{"label": "fig:autocorr", "why": "one line"}],
   "limitations_stated": [{"value": "...", "evidence": [...]}],
   "limitations_flagged": [{"value": "agent opinion, labelled as such"}],
   "code_data": {"value": "GitHub link or none", "evidence": [...]},
@@ -281,7 +294,8 @@ The Card is the product. Everything else exists to make Cards that are correct, 
 **Rules:**
 - Results keep their numbers, units and error bars exactly as the paper states them. No rounding.
 - Opinion fields are never mixed with the paper's own claims.
-- Locations are sections and equation numbers for LaTeX, and pages for PDF.
+- Quotes are copied character for character from `flattened.txt`, LaTeX included. Evidence `loc` and `match_count` are filled in by Verify, not by the model. `loc` is the section heading plus the enclosing `\label`, for LaTeX, or the page, for PDF.
+- Key figures are chosen from captions (the model never sees pixels) and resolved by code to the `\includegraphics` file in the downloaded source.
 - Every Card records its arXiv version, model, prompt version and schema version.
 
 ## 9. Review UI and Monitoring
@@ -291,7 +305,7 @@ The Card is the product. Everything else exists to make Cards that are correct, 
 ### `/review`
 
 Shows one Card at a time, ordered by `best_score`.
-- **Layout:** the tl;dr, results and assumptions come first. Unsupported fields are shaded, and Evidence quotes expand on click. Stale and invented-number badges are shown.
+- **Layout:** the tl;dr, results and assumptions come first. Unsupported fields are shaded, and Evidence quotes expand on click. Quotes are raw LaTeX: math renders with KaTeX auto-render, fed the paper's preamble `\newcommand`s, and text markup is cleaned up server-side for display only. Key figures are shown from the source tarball: PNG and JPG as they are, PDF figures rendered to PNG with pypdfium2, and EPS as "figure not renderable". Stale and invented-number badges are shown.
 - **Controls:** relevance (yes, partly, no), a Flag control on each field (a kind plus an optional note), and deep read (yes or no).
 - **Timing:** a server-side timer runs from render to submit. The next Card loads automatically.
 - **Export:** an "Export to Markdown" button.
