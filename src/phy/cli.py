@@ -1,50 +1,31 @@
 """The `phy` command. Only parses arguments and calls plain functions."""
 
 import re
-import tarfile
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-import httpx
 import structlog
 import typer
 
 import phy
+from phy import daily as daily_stage
 from phy import filter as filter_stage
 from phy import init as phy_init
+from phy import llm
 from phy import log as phy_log
+from phy import status as phy_status
 from phy import verify as verify_stage
 from phy import watch as watch_stage
-from phy.arxiv import ArxivUnavailable, OaiError
 from phy.card import export_schemas
 from phy.config import SCHEMAS, ConfigError, resolve_paths
 from phy.ctx import Ctx
-from phy.llm import ApiError, AuthError
 from phy.locks import phy_lock
-from phy.prompts import PromptError
 from phy.read import stage as read_stage
-from phy.read.flatten import NoMainFile
-from phy.read.source import UnknownSourceFormat
 
 log = structlog.get_logger()
 
 ARXIV_ID = re.compile(r"\d{4}\.\d{4,5}")
-WATCH_ERRORS = (ConfigError, ArxivUnavailable, OaiError, httpx.HTTPError)
-FILTER_ERRORS = (ConfigError, AuthError, PromptError, filter_stage.UnknownPaper)
-READ_ERRORS = (
-    ConfigError,
-    AuthError,
-    ApiError,
-    PromptError,
-    ArxivUnavailable,
-    OaiError,
-    httpx.HTTPError,
-    UnknownSourceFormat,
-    tarfile.TarError,
-    NoMainFile,
-)
-VERIFY_ERRORS = (ConfigError, verify_stage.NoCard)
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Physics Agent Platform.")
 schema_app = typer.Typer(no_args_is_help=True, help="The Card JSON Schemas.")
@@ -78,7 +59,7 @@ def init() -> None:
     paths = resolve_paths()
     try:
         report = phy_init.run(paths)
-    except (ConfigError, AuthError) as e:
+    except (ConfigError, llm.AuthError) as e:
         log.error("init.failed", error=str(e))
         raise typer.Exit(1) from None
     typer.echo(f"$PHY_HOME: {paths.home}")
@@ -100,11 +81,13 @@ def _arxiv_id(value: str | None) -> str | None:
 @app.command()
 def read(
     paper: Annotated[
-        str,
+        str | None,
         typer.Option(
-            "--paper", callback=_arxiv_id, help="arXiv id (no version); the latest is read."
+            "--paper",
+            callback=_arxiv_id,
+            help="arXiv id (no version); the latest is read, bypassing selection.",
         ),
-    ],
+    ] = None,
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="Stop after flattened.txt; print size and tokens.")
     ] = False,
@@ -112,14 +95,28 @@ def read(
         bool, typer.Option("--force", help="Replace the Card if this Paper version has one.")
     ] = False,
 ) -> None:
-    """Read one Paper: fetch and flatten its latest version, and write a draft Card."""
+    """Read today's selection (within quota and budget), or one Paper with --paper: fetch and
+    flatten its latest version, and write a draft Card."""
+    if (dry_run or force) and paper is None:
+        raise typer.BadParameter("--dry-run and --force need --paper")
     paths = resolve_paths()
     with phy_lock(paths):
         try:
-            outcome = read_stage.run(Ctx.load(paths), paper, dry_run=dry_run, force=force)
-        except READ_ERRORS as e:
+            ctx = Ctx.load(paths)
+            if paper is None:
+                selected = read_stage.run_selected(ctx)
+            else:
+                outcome = read_stage.run(ctx, paper, dry_run=dry_run, force=force)
+        except read_stage.ERRORS as e:
             log.error("read.failed", error=str(e))
             raise typer.Exit(1) from None
+    if paper is None:
+        typer.echo(f"{len(selected.carded)} carded, {len(selected.failed)} failed")
+        for failure in selected.failed:
+            typer.echo(f"failed: {failure}")
+        if selected.failed:
+            raise typer.Exit(1)
+        return
     match outcome:
         case read_stage.Prepared():
             typer.echo(f"{outcome.flattened}")
@@ -134,6 +131,23 @@ def read(
                 f"{paper}v{outcome.version} already has card {outcome.card_id};"
                 " pass --force to replace it"
             )
+
+
+@app.command()
+def daily() -> None:
+    """Watch, Filter, Read and Verify in order. A failed Stage is logged and the later ones
+    still run; the exit code is non-zero only for a crash."""
+    paths = resolve_paths()
+    with phy_lock(paths):
+        try:
+            ctx = Ctx.load(paths)
+        except ConfigError as e:
+            log.error("daily.failed", error=str(e))
+            raise typer.Exit(1) from None
+        ran = daily_stage.run(ctx)
+    typer.echo(f"failed stages: {', '.join(ran.failed)}" if ran.failed else "all stages ok")
+    if ran.crashed:
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -153,7 +167,7 @@ def verify(
     with phy_lock(paths):
         try:
             outcome = verify_stage.run(Ctx.load(paths), paper, force=force)
-        except VERIFY_ERRORS as e:
+        except verify_stage.ERRORS as e:
             log.error("verify.failed", error=str(e))
             raise typer.Exit(1) from None
     match outcome:
@@ -192,7 +206,7 @@ def watch(
     with phy_lock(paths):
         try:
             mark = watch_stage.run(Ctx.load(paths), since=since and since.date(), reset=reset)
-        except WATCH_ERRORS as e:
+        except watch_stage.ERRORS as e:
             log.error("watch.failed", error=str(e))
             raise typer.Exit(1) from None
     typer.echo(f"mark: {mark.isoformat() if mark else 'none'}")
@@ -219,7 +233,7 @@ def filter_(
     with phy_lock(paths):
         try:
             screened = filter_stage.run(Ctx.load(paths), paper=paper, force=force)
-        except FILTER_ERRORS as e:
+        except filter_stage.ERRORS as e:
             log.error("filter.failed", error=str(e))
             raise typer.Exit(1) from None
     typer.echo(
@@ -229,6 +243,17 @@ def filter_(
     )
     if screened.failed:
         raise typer.Exit(1)
+
+
+@app.command()
+def status() -> None:
+    """High-water mark, 7-day funnel, the ISO week's spend, failures not retried, Release."""
+    try:
+        report = phy_status.status(resolve_paths())
+    except ConfigError as e:
+        log.error("status.failed", error=str(e))
+        raise typer.Exit(1) from None
+    typer.echo(phy_status.render(report))
 
 
 @schema_app.command("export")

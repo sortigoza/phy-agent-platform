@@ -14,7 +14,7 @@ SPEC §6 `reviews`/`flags`, §9 `/review` Controls / Keys / Timing / Export; QUI
 
 ## Acceptance criteria
 
-- Migration `004_reviews_flags` creates `reviews` and `flags`.
+- `reviews` and `flags` exist already: slice 10 added them as migration `006_reviews_flags` (Read's selection needs Reviews; `004` could not be used, since a db at `005` never applies it).
 - Relevance (`y`/`p`/`n`), deep read (`d`) and save (`s`) in the fixed bottom bar, written with HTMX; saving sets the Card status `reviewed` and loads the next Card.
 - Flags inline: `f`, then `1`–`4` for the kind, optional note, Enter; Flags show as chips on the field and can be removed before save.
 - Keys `j`/`k`, `[`/`]`, `o`, `r`, `?` as in SPEC; `?` lists them from the hover dictionary.

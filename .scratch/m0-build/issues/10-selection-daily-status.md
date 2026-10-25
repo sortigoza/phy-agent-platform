@@ -1,7 +1,7 @@
 # Read selection, phy daily and phy status
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 05, 09
 
 ## Goal

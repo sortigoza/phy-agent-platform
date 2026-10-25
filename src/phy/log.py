@@ -69,6 +69,15 @@ class DailyFileHandler(logging.Handler):
         super().close()
 
 
+def log_failure(logger, event: str, error: Exception, expected: tuple, **keys) -> None:
+    """Log a handled failure once at ERROR: an `expected` error by its message, anything else
+    (a bug) with its traceback."""
+    if isinstance(error, expected):
+        logger.error(event, error=str(error), **keys)
+    else:
+        logger.exception(event, error=str(error), **keys)
+
+
 _installed: list[logging.Handler] = []
 
 
@@ -81,16 +90,19 @@ def configure(paths: Paths, verbose: bool = False) -> None:
         cache_logger_on_first_use=False,
     )
 
-    def formatter(renderer):
+    def formatter(*renderer):
         return structlog.stdlib.ProcessorFormatter(
             foreign_pre_chain=SHARED_PROCESSORS,
-            processors=[structlog.stdlib.ProcessorFormatter.remove_processors_meta, renderer],
+            processors=[structlog.stdlib.ProcessorFormatter.remove_processors_meta, *renderer],
         )
 
     console = logging.StreamHandler(sys.stderr)
     console.setFormatter(formatter(structlog.dev.ConsoleRenderer(colors=sys.stderr.isatty())))
     jsonl = DailyFileHandler(paths)
-    jsonl.setFormatter(formatter(structlog.processors.JSONRenderer()))
+    # The console renders tracebacks itself; JSON needs them as a string under `exception`.
+    jsonl.setFormatter(
+        formatter(structlog.processors.format_exc_info, structlog.processors.JSONRenderer())
+    )
 
     root = logging.getLogger()
     for handler in _installed:

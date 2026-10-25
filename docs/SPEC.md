@@ -249,11 +249,12 @@ A Paper that passes is a Candidate.
 ### 7.3 Read
 
 **Selection** runs at the start of each Read.
-- Every Screened-in Paper with `best_score ≥ read.always_threshold` (default 0.9) is selected.
-- Then the highest-scoring other Screened-in Papers are selected up to the day's quota. The quota is `read.daily_quota` (default 8) plus the unused quota carried over from earlier days in the same ISO week.
+- Every Screened-in Paper (its latest version, without a Card) with `best_score ≥ read.always_threshold` (default 0.9) is selected.
+- Then Stale re-cards, then the highest-scoring other Screened-in Papers, are selected up to the day's quota. The quota is `read.daily_quota` (default 8) plus the unused quota carried over from earlier days in the same ISO week, carried day by day: a day over its quota leaves nothing to carry, never a debt. Every Card Read that day counts, the always-selected ones and `read --paper` ones included.
 - Total Read volume per week never exceeds `read.weekly_ceiling` (default 50).
-- Re-cards of Stale Papers count toward the quota.
-- If the weekly spend guardrail (`budget.weekly_usd`) has been reached, nothing is selected and the Monitoring page says so.
+- Re-cards of Stale Papers count toward the quota. A Paper is re-carded (its latest version) when its newest Card is Stale and, with `read.recard_stale = "relevant_only"`, that Card's latest Review rated it yes or partly (`all` re-cards every one, `never` none).
+- If the weekly spend guardrail (`budget.weekly_usd`) has been reached, nothing is selected, Read logs one WARNING `read.budget_reached`, and `phy status` and the Monitoring page say so.
+- Days and weeks are UTC, as `runs.started_at` is. Each selected Paper is its own run (`<run_id>-<arxiv_id>v<version>`); one failing is logged at ERROR and the others go ahead, and since it still has no Card it is selected again next time.
 
 **Fetching source.** Read fetches `arxiv.org/src/<id>v<n>` through the shared rate limiter and detects the format from magic bytes: gzip then tar, a single gzipped `.tex`, or a PDF.
 
