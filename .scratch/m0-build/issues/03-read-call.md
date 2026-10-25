@@ -1,7 +1,7 @@
 # The Read call
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 02
 
 ## Goal

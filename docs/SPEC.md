@@ -301,7 +301,7 @@ The result is `flattened.txt`: **raw flattened LaTeX**, never detexed (see the Q
 4. **Labels.** These checks give warnings only and never change Support. A `key_equations` or `key_figures` label that doesn't exist in the source gives a warning, and the entry stays visible with a chip. A key equation's canonical `latex` must be a substring of its labelled environment's canonical body. A key figure's label must sit in a `figure` environment.
 5. **List caps.** An over-cap list, including more than 2 Evidence quotes, keeps its first N, and an `over_cap` warning records the dropped count. The raw response stays in the run trace. Zero `key_results` gives a warning.
 
-After these checks the Card's status becomes `verified`. Failures never get a status of their own. Verify stores `unsupported_count` (inferred fields excluded), `inferred_count`, `invented_numbers` (the red badge) and `warnings` (`{kind, field, detail}`, shown as grey chips on their sections).
+After these checks the Card's status becomes `verified`; re-verifying a reviewed or Stale Card (`phy verify --paper ID --force`) keeps its status. Failures never get a status of their own. Verify stores `unsupported_count` (inferred fields excluded), `inferred_count`, `invented_numbers` (the red badge) and `warnings` (`{kind, field, detail}`, shown as grey chips on their sections).
 
 **M1 model reviewer.** A separate prompt and a separate call that sees only one field's value, its quote, and the surrounding source passage. It never sees the Read reasoning. It answers whether the quote supports the value.
 

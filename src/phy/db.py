@@ -84,13 +84,14 @@ def record_run(
     status: str,
     started_at: str,
     error: str | None = None,
+    arxiv_id: str | None = None,
 ) -> None:
     """The `runs` row of a Stage run with no model call (`ok` or `failed`)."""
     with conn:
         conn.execute(
-            "INSERT INTO runs (id, stage, status, error, started_at, ended_at)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (run_id, stage, status, error, started_at, _now()),
+            "INSERT INTO runs (id, stage, arxiv_id, status, error, started_at, ended_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (run_id, stage, arxiv_id, status, error, started_at, _now()),
         )
 
 
@@ -255,6 +256,41 @@ def get_card(conn: sqlite3.Connection, arxiv_id: str, version: int) -> sqlite3.R
     return conn.execute(
         "SELECT * FROM cards WHERE arxiv_id = ? AND version = ?", (arxiv_id, version)
     ).fetchone()
+
+
+def draft_cards(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Every draft Card with its Paper version's source type, oldest first (Verify's catch-up)."""
+    return conn.execute(
+        "SELECT cards.*, paper_versions.source_type FROM cards JOIN paper_versions"
+        " USING (arxiv_id, version) WHERE cards.status = 'draft' ORDER BY cards.id"
+    ).fetchall()
+
+
+def latest_card(conn: sqlite3.Connection, arxiv_id: str) -> sqlite3.Row | None:
+    """The Card of the Paper's latest Carded version, with its source type."""
+    return conn.execute(
+        "SELECT cards.*, paper_versions.source_type FROM cards JOIN paper_versions"
+        " USING (arxiv_id, version) WHERE arxiv_id = ? ORDER BY version DESC LIMIT 1",
+        (arxiv_id,),
+    ).fetchone()
+
+
+def write_verified_card(
+    conn: sqlite3.Connection,
+    card_id: int,
+    card_json: str,
+    unsupported_count: int,
+    inferred_count: int,
+) -> None:
+    """Store what Verify made of a Card. A draft (or re-verified) Card becomes `verified`; a
+    reviewed or stale one keeps its status."""
+    with conn:
+        conn.execute(
+            "UPDATE cards SET card_json = ?, unsupported_count = ?, inferred_count = ?,"
+            " status = CASE WHEN status IN ('draft', 'verified') THEN 'verified' ELSE status END,"
+            " updated_at = ? WHERE id = ?",
+            (card_json, unsupported_count, inferred_count, _now(), card_id),
+        )
 
 
 def write_draft_card(
