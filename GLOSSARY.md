@@ -91,3 +91,14 @@ The status of a Golden set Paper. A Placeholder's Reference card is an uncorrect
 **Dev** / **Held-out**:
 The two splits of the Golden set. Dev Papers may be inspected and iterated on freely during Meta-work; Held-out Papers are scored only to accept a change, and their per-field failures stay hidden so they never become tuning data.
 _Avoid_: train / test
+
+**Accepted run**:
+A Golden eval run the Reader has accepted as the new baseline for its Golden set version. Every later run's run-to-run diff is taken against the latest one.
+_Avoid_: active run, last run
+
+**Run-to-run diff**:
+The field-by-field comparison of a Golden eval run's Dev Cards with those of the Accepted run, split into Material changes and rewordings.
+
+**Material change**:
+A run-to-run difference that can change what the Reader believes about a Paper: a field's Support or numbers, a failing quote, a list item added or removed, or a Filter decision. A difference in wording alone is a **rewording**, never a Material change.
+_Avoid_: regression (a Material change may be an improvement)

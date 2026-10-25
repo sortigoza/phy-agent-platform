@@ -85,7 +85,10 @@ A Paper that appears in several sets gets the most permissive pre-filter of thos
 3. **Symmetry and physics constraints in architectures:** gauge equivariance and conservation laws, and what each buys in accuracy or sample efficiency.
 4. **ML for observables and phases:** phase detection, and inverse problems such as spectral reconstruction.
 
-**Negative keywords (initial):** "renormalization" or "lattice" used only in an ML sense; pure quantum-computing hardware; pure ML benchmarks with no physics application.
+**Out of scope (initial).** These are prose `scope_notes` in `questions.yaml`, applied by the Filter model; literal `negative_keywords` are for the code pre-filter only.
+- "Renormalization" or "lattice" used only in an ML sense, with no physical system.
+- Quantum-computing hardware, devices, or benchmarks of quantum processors.
+- ML methods or benchmarks with no physics application.
 
 **Seed papers.** These are the initial Golden set, as Placeholder Dev Papers:
 
@@ -155,12 +158,12 @@ phy-agent-platform/             # the repo: code only
 ├── prompts/<stage>/<version>.md  # immutable once used; config selects the active version
 ├── schemas/                    # exported Card JSON Schemas
 ├── src/phy/                    # cli, config, db, arxiv, watch, filter, read/, verify, eval,
-│                               # card, llm, tracer, locks, ui/, migrations/, defaults/
+│                               # card, questions, llm, tracer, locks, ui/, migrations/, defaults/
 └── tests/                      # pytest; fixtures/ replayed with respx, -m live for the paid smoke test
 
 $PHY_HOME/                      # ~/.phy-agent-platform by default; a local git repo, no remote
 ├── config.toml                 # all knobs (QUICK_START lists them)
-├── questions.yaml              # research questions, keywords, negative keywords
+├── questions.yaml              # research questions, keywords, negative keywords, scope notes
 ├── golden/
 │   ├── manifest.yaml           # golden set version, papers, split, status, provenance
 │   └── <arxiv_id>/reference.json
@@ -189,7 +192,7 @@ The Card schema lives in `src/phy/card.py` as two Pydantic models. `CardDraft` i
 | `reviews` | Review | UI | card_id, relevance (yes, partly, no), deep_read, seconds_spent, note, created_at |
 | `flags` | Flag | UI | card_id, field_path, kind (wrong_value, quote_doesnt_support, missing, should_be_opinion), note, created_at |
 | `runs` | Stage execution | every Stage | id, stage, arxiv_id, status, error, model, prompt_version, tokens_in, tokens_out, cache_read_tokens, cost_usd, started_at, ended_at, log_path |
-| `eval_runs` | Golden eval run | `phy eval` | id, golden_version, split, prompt_versions_json, model, metrics_json, per_paper_json, created_at |
+| `eval_runs` | Golden eval run | `phy eval` | id, golden_version, split, prompt_versions_json, model, metrics_json, per_paper_json (each eval Card whole; eval Cards never go in `cards`), baseline_id, diff_json, material_changes, accepted_at, created_at |
 
 Card fields are stored only inside `card_json` and queried with SQLite JSON functions. There is no separate `card_fields` table.
 
@@ -232,8 +235,10 @@ Card fields are stored only inside `card_json` and queried with SQLite JSON func
 A Paper that passes is a Candidate.
 
 **Score** (model). One call per Candidate, with `effort` set to `filter.effort` (default `low`).
-- The system prompt and the question definitions form a stable cached prefix. The title and abstract come after the cache breakpoint.
-- The output is `{Q1..Q4: {score: 0–1, reason: one line}}`.
+- The Filter prompt (`prompts/filter/<version>.md`, `system: self`) is the whole system prompt, with `{{questions}}` and `{{scope_notes}}` filled in; it is not the Read shared prompt. It carries the cache breakpoint, and with the output schema the cached prefix is about 1,350 tokens, above Haiku 5.5's 512-token minimum. The user turn is the title, arXiv categories and abstract (about 200–450 tokens).
+- The output is one field per question id in `questions.yaml` (`{Q1..Qn: {reason, score}}`), a Pydantic model built from the ids, so adding a question changes no code. `reason` comes before `score` and is one line of at most 20 words.
+- `score` is a float from 0 to 1, anchored in the prompt: **0.9+** the main contribution answers the question directly (always Carded); **0.7** on the topic but a narrower or neighbouring aspect; **0.5** something someone working on the question would use, though the focus is elsewhere (the bar for a Card); **0.3** same field or a shared technique, nothing new for the question; **0.1** shared words only. A paper under a scope note scores at most 0.3. Structured outputs can't enforce a numeric range, so code clamps to [0, 1] and logs a warning.
+- Measured on the seed Papers plus six keyword-sharing probes (Filter prompt ticket in the M0 map): seeds scored 0.9–0.95 on their question, and every probe scored ≤ 0.3. A warm call costs about $0.00015 per Candidate (about 200 output tokens including thinking at `low`) and takes about 2 s.
 - `best_score` is the maximum over questions. The Paper is Screened in when `best_score ≥ filter.threshold` (default 0.5).
 
 ### 7.3 Read
@@ -261,7 +266,7 @@ The result is `flattened.txt`: **raw flattened LaTeX**, never detexed (see the Q
 - The model reads this text, never the PDF itself. PDF-sourced Cards have no key figures.
 
 **The call.** One `claude-sonnet-5-5` call with `effort` set to `read.effort` (default `medium`). The output format is the Card schema.
-- The prompt is ordered for caching: a short shared system prompt (`prompts/shared/<version>.md`), then the paper text with a cache breakpoint, then the Read instructions with the research questions filled in. M1's Verify reviewer reuses the same prefix, so it re-reads the paper from cache.
+- The prompt is ordered for caching: a short shared system prompt (`prompts/shared/<version>.md`), then the paper text with a cache breakpoint, then the Read instructions with the research questions filled in by the same `render_questions()` that Filter uses. M1's Verify reviewer reuses the same prefix, so it re-reads the paper from cache.
 - Card text expands every acronym the first time it is used and names the authors as "Surname et al." (both surnames when there are two), never "the authors". The author list comes from the OAI-PMH metadata as a `{{authors}}` placeholder (Read prompt v2).
 - List caps (for example ≤ 5 key results) are stated in the prompt but not enforced by the schema, because the API ignores `maxItems` and a paid call should not fail over one extra item. Verify trims an over-cap list and logs a warning.
 
@@ -363,7 +368,7 @@ Shows the Instrument tiles (green or red, with a one-week sparkline) and the wee
 | Unsupported-field rate | Is it right? | cards | > 10% over 7 days | Inspect runs; revise the Read prompt or parser |
 | Grounding rate (Golden) | Is it right? | eval_runs | < 98% | Revert the change |
 | Invented numbers | Is it right? | cards, eval_runs | any | Inspect the Card; this is a hard fail on Golden |
-| Golden run-to-run diff | Did a change move anything? | eval_runs | any field changed on Dev | Review the diff before accepting |
+| Golden run-to-run diff | Did a change move anything? | eval_runs | any Material change on Dev, run not yet accepted | Review the diff on `/eval/<id>` before accepting |
 | Filter precision | Is it useful? | reviews | < 70% over 2 weeks (once ≥ 20 Reviews) | Add negative keywords or examples |
 | Median review time | Is the Card well designed? | reviews | > 5 min | Shorten or reorder the Card |
 | Cost per Carded paper | Is it affordable? | runs | > 2× the week-1 median | Find which Stage grew |
@@ -408,12 +413,21 @@ The Golden set is the unit test suite for reading. It follows standard dataset p
 | Grounding rate | Code: share of quotes found verbatim | all | ≥ 98% | M0 |
 | Invented numbers | Code | all | 0, hard fail | M0 |
 | Filter decision | Code: in-scope accepted, out-of-scope rejected | all | all correct | M0 |
-| Run-to-run diff | Code: field-level diff against the last accepted run | Dev | Reviewed by the Reader | M0 |
+| Run-to-run diff | Code: field-level diff against the baseline, split into Material changes and rewordings | Dev | Material changes reviewed by the Reader | M0 |
 | Field accuracy | Model judge: correct, partial or wrong per field; the Reader audits 10% | Trusted | ≥ 90% | M1 |
 
 **When it runs.** On every change to a prompt, model, schema or parser, and before that change becomes active. Once a week regardless, until the scores are stable. Every result is stored in `eval_runs` with the prompt versions, model and Golden set version.
 
 **Accepting a change** is Meta-work. The Reader creates a new prompt version, runs `phy eval`, compares the results with the active version, and switches `config.toml` only if nothing regressed.
+
+**The run-to-run diff.** A run's baseline is the latest accepted run with the same Golden set version; with none, the run shows "no baseline". `phy eval` stores the diff on the run and prints a summary (Scores against the baseline, Material changes and rewordings per Paper, a link); the full diff is on `/eval/<id>`, with the review page conventions.
+- **Material change:** a field's Support changed, its set of parsed numbers changed (by value plus significant figures), an invented number appeared, a quote now fails, a list item was added or removed, `code_data` flipped between null and present, or a Filter decision crossed `filter.threshold` or `read.always_threshold`.
+- **Rewording:** the value text changed with the same numbers and Support, different quotes still pass, or Filter scores drifted without crossing a threshold. Rewordings are shown greyed out and folded, never red. `loc` and `match_count` are ignored.
+- List fields are paired between runs by content (shared numbers first, then text similarity), not position; reordering alone is ignored.
+- Opinion field changes sit in their own folded section and never count; a deep-read recommendation flip is highlighted.
+- Changed values are shown old over new, rendered with KaTeX, with a toggle to a word-level diff of the raw text.
+
+**Accepting a run.** After switching `config.toml`, the Reader runs `phy eval accept <id>`. It refuses when the run's prompt versions and model differ from the active config, or when the run has a hard fail (an invented number, or grounding below 98%). There is no override. Accept never edits config.
 
 ## 11. Human loop and attention budget
 

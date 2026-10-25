@@ -36,7 +36,11 @@ questions:
     keywords: [normalizing flow, diffusion model, generative, sampler, topological freezing]
     negative_keywords: []
 physics_terms: [lattice, gauge, Hamiltonian, spin, fermion, QCD, many-body]   # for cs.LG / stat.ML
-negative_keywords: [quantum hardware, superconducting qubit fabrication]
+negative_keywords: [quantum hardware, superconducting qubit fabrication]   # code pre-filter only
+scope_notes:                       # prose rules the Filter model applies; keywords never reach the model
+  - '"Renormalization" or "lattice" used only in a machine-learning sense, with no physical system.'
+  - Quantum-computing hardware, devices or benchmarks of quantum processors.
+  - Machine-learning methods or benchmarks with no physics application.
 ```
 
 ## 3. First end-to-end run (a smoke test on one paper you know)
@@ -107,7 +111,7 @@ All knobs live in `config.toml` unless noted. Change one at a time, and check th
 | `filter.effort` | `low` | How much thinking the model does per Candidate | Same as above (try `medium`) |
 | `filter.threshold` | `0.5` | Minimum best_score to be Screened in | Precision is low (raise it) or recall is low (lower it) |
 | `filter.prompt_version` | `v1` | Which `prompts/filter/<v>.md` is used | After a Meta-work cycle |
-| `questions.yaml` | 4 questions | Questions, keywords and negative keywords | Funnel shape, precision, or your interests change |
+| `questions.yaml` | 4 questions | Questions, keywords, negative keywords and scope notes | Funnel shape, precision, or your interests change |
 
 ### Read
 
@@ -150,10 +154,12 @@ Edit `golden/manifest.yaml`. Any change bumps `version`.
 ```sh
 cp prompts/read/v1.md prompts/read/v2.md       # never edit a used version in place
 $EDITOR prompts/read/v2.md                     # address the Flags / red tile you saw
-uv run phy eval --prompt read=v2               # Golden set: grounding, invented numbers, filter, diff vs active
-uv run phy eval --compare last                 # side-by-side with the active version's last eval
+uv run phy eval --prompt read=v2               # Golden set: grounding, invented numbers, filter, diff vs the accepted run
+# open the printed /eval/<id> link and review the Material changes
 # accept only if nothing regressed:
-#   set read.prompt_version = "v2" in config.toml, then add a line to CHANGELOG.md
+#   set read.prompt_version = "v2" in config.toml
+uv run phy eval accept <id>                    # refuses if config doesn't match the run, or on a hard fail
+#   then add a line to CHANGELOG.md and commit
 ```
 
 Useful inputs for Meta-work:

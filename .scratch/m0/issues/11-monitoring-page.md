@@ -15,4 +15,4 @@ Also settle the funnel view (harvested → pre-filtered → screened in → Card
 
 ## Context
 
-Verify stores `unsupported_count`, `inferred_count`, `invented_numbers_json` and `warnings_json` per Card ([Code checks in Verify](06-verify-code-checks.md)). UI conventions: [Review page design](05-review-page-prototype.md). Database layer: raw `sqlite3`, and SQLite is the source of every tile; logs carry only operational metrics ([Code conventions and runtime plumbing](07-code-conventions.md)).
+Verify stores `unsupported_count`, `inferred_count`, `invented_numbers_json` and `warnings_json` per Card ([Code checks in Verify](06-verify-code-checks.md)). UI conventions: [Review page design](05-review-page-prototype.md). Database layer: raw `sqlite3`, and SQLite is the source of every tile; logs carry only operational metrics ([Code conventions and runtime plumbing](07-code-conventions.md)). The "Golden run-to-run diff" tile reads `eval_runs.material_changes` and `accepted_at`, and links to `/eval/<id>` ([How the Golden run-to-run diff is shown](10-golden-diff-display.md)).
