@@ -83,7 +83,7 @@ Two fixes:
 **Spec changes made:** SPEC §6, §7.3, §7.4, §8 and §12; GLOSSARY: Support and Opinion field.
 
 **Assets:**
-- branch `prototype/card-schema-read-prompt` (commit `a69c7c4`, never merged; local only, as there is no remote);
+- branch `prototype/card-schema-read-prompt` (commit `a69c7c4`, never merged; pushed to `origin`);
 - the code in `.scratch/m0/prototypes/card-read/` on that branch;
 - the Card in `out/card.json` and `out/card.md` on that branch, and the call's usage in `out/usage.json`. [Review page design](05-review-page-prototype.md) should build from `out/card.json`.
 
