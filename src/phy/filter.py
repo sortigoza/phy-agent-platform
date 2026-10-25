@@ -78,7 +78,9 @@ def run(ctx: Ctx, *, paper: str | None = None, force: bool = False) -> Screened:
     with structlog.contextvars.bound_contextvars(run_id=ctx.run_id, stage="filter"):
         started_at = datetime.now(UTC).isoformat(timespec="seconds")
         try:
-            screened, fails = _screen(ctx, _todo(ctx, paper, force))
+            todo = _todo(ctx, paper, force)
+            log.info("filter.started", paper_versions=len(todo))
+            screened, fails = _screen(ctx, todo)
         except Exception as e:
             db.record_run(ctx.db, ctx.run_id, "filter", "failed", started_at, error=str(e))
             raise
@@ -87,9 +89,9 @@ def run(ctx: Ctx, *, paper: str | None = None, force: bool = False) -> Screened:
         for row in fails:
             db.write_screening(
                 ctx.db,
-                row["arxiv_id"],
-                row["version"],
-                "fail",
+                arxiv_id=row["arxiv_id"],
+                version=row["version"],
+                prefilter="fail",
                 scores_json=None,
                 best_score=None,
                 screened_in=False,
@@ -147,12 +149,13 @@ def _screen(ctx: Ctx, todo: list) -> tuple[Screened, list]:
                 continue
             best = max(item["score"] for item in scores.values())
             screened_in = best >= config.threshold
-            screened.screened_in += screened_in
+            if screened_in:
+                screened.screened_in += 1
             db.write_screening(
                 ctx.db,
-                arxiv_id,
-                version,
-                result,
+                arxiv_id=arxiv_id,
+                version=version,
+                prefilter=result,
                 scores_json=json.dumps(scores),
                 best_score=best,
                 screened_in=screened_in,

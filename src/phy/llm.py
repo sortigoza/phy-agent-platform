@@ -15,7 +15,7 @@ from pydantic import BaseModel, ValidationError
 
 from phy import prompts
 from phy.card import SCHEMA_VERSION, CardDraft, draft_format
-from phy.config import Price
+from phy.config import FilterConfig, Price, ReadConfig
 from phy.ctx import Ctx
 from phy.prompts import PromptError
 from phy.questions import render_questions, render_scope_notes
@@ -175,7 +175,7 @@ def screen(ctx: Ctx, run: Run, title: str, categories: str, abstract: str) -> di
     return scores
 
 
-def _warn_on_drift(prompt: prompts.Prompt, config) -> None:
+def _warn_on_drift(prompt: prompts.Prompt, config: FilterConfig | ReadConfig) -> None:
     """The prompt names the model and effort it was written for; config decides what runs."""
     for key in ["model", "effort"]:
         if getattr(prompt, key) != getattr(config, key):
