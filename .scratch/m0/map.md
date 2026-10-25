@@ -24,9 +24,11 @@ Every M0 build decision is locked, and M0 (SPEC §3) is cut into ordered, vertic
 - [Card schema v1 and Read prompt v1](issues/04-card-schema-and-read-prompt-prototype.md): `CardDraft` (model output, quotes before value) plus a stored `Card`; the model marks `inferred`; opinions sit in one `opinion` block; soft list caps; `{{name}}` prompt placeholders; Read stays at `medium` effort. One real call cost $0.098 (27k in, 3k out) and surfaced a per-field number-grounding gap, now a Verify check; the code is on branch `prototype/card-schema-read-prompt`.
 - [Code checks in Verify](issues/06-verify-code-checks.md): numbers are parsed tokens (not glued to identifiers) compared by value plus significant figures, with the sign ignored and error bars split. The invented-number check covers every Fact plus the tl;dr; a miss makes the field unsupported and adds a red badge. A number missing from a field's own quotes makes it inferred. All quotes must pass. `canonicalise_mapped()` offsets give an exact `loc`. Status stays `verified`, with failures stored as `invented_numbers` and `warnings`.
 
+- [Review page design](issues/05-review-page-prototype.md): one column in Card order (layout A) with section pills under a fixed top bar, quotes folded under each value, and a verdict bar fixed to the bottom; Flags are entered inline (`f`, `1`–`4`, note, Enter); keyboard shortcuts throughout; hover help everywhere from one shared dictionary; the top bar is the convention for every page; Read prompt v2 expands acronyms and names authors as "X et al."; the code is on branch `prototype/review-page`.
+
 ## Not yet specified
 
-- **Monitoring page layout and the SQL behind each tile.** It depends on the UI patterns from the review page prototype and on the database layer chosen in the code conventions ticket. Verify now stores `unsupported_count`, `inferred_count`, `invented_numbers` and `warnings` per Card, as inputs for the unsupported-rate and invented-number tiles.
+- **Monitoring page layout and the SQL behind each tile.** The UI conventions are now set (top bar, section pills, hover help; see Review page design). It still waits on the database layer chosen in the code conventions ticket. Verify now stores `unsupported_count`, `inferred_count`, `invented_numbers` and `warnings` per Card, as inputs for the unsupported-rate and invented-number tiles.
 
 ## Out of scope
 

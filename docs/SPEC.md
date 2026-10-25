@@ -246,6 +246,7 @@ The result is `flattened.txt`: **raw flattened LaTeX**, never detexed (see the Q
 
 **The call.** One `claude-sonnet-5-5` call with `effort` set to `read.effort` (default `medium`). The output format is the Card schema.
 - The prompt is ordered for caching: a short shared system prompt (`prompts/shared/<version>.md`), then the paper text with a cache breakpoint, then the Read instructions with the research questions filled in. M1's Verify reviewer reuses the same prefix, so it re-reads the paper from cache.
+- Card text expands every acronym the first time it is used and names the authors as "Surname et al." (both surnames when there are two), never "the authors". The author list comes from the OAI-PMH metadata as a `{{authors}}` placeholder (Read prompt v2).
 - List caps (for example ≤ 5 key results) are stated in the prompt but not enforced by the schema, because the API ignores `maxItems` and a paid call should not fail over one extra item. Verify trims an over-cap list and logs a warning.
 
 **Prompt files.** Each `prompts/<stage>/<version>.md` starts with YAML front matter (`stage`, `version`, `system`, `model`, `effort`, `schema`, `params`, `notes`), followed by the body. Placeholders are `{{name}}`, never `$name`, because prompt text contains LaTeX `$`. A shared system prompt must stay byte-identical across every call that reuses its cached prefix.
@@ -322,10 +323,16 @@ Caps: `key_results` 1–5, `assumptions` ≤ 4, `limitations_stated` ≤ 4, `key
 ### `/review`
 
 Shows one Card at a time, ordered by `best_score`.
-- **Layout:** the tl;dr, results and assumptions come first. Unsupported fields are shaded, and Evidence quotes expand on click. Quotes are raw LaTeX: math renders with KaTeX auto-render, fed the paper's preamble `\newcommand`s, and text markup is cleaned up server-side for display only. Key figures are shown from the source tarball: PNG and JPG as they are, PDF figures rendered to PNG with pypdfium2, and EPS as "figure not renderable". Stale and invented-number badges are shown.
+- **Layout:** one column in Card order: the tl;dr, results and assumptions come first, then setup, limitations, equations and figures, and the Agent's opinion as one dashed block. Each field is a row: the label with its support and number pills, the value, and a Flag button. Inferred fields are shaded blue and unsupported fields red. Evidence quotes are folded under each value and show the derived `loc`, plus "also appears N× elsewhere" when `match_count` > 1. A row of section pills under the top bar jumps between sections. Relevance, deep read and save sit in a bar fixed to the bottom. Quotes are raw LaTeX: math renders with KaTeX auto-render, fed the paper's preamble `\newcommand`s, and text markup is cleaned up server-side for display only. Key figures are shown from the source tarball: PNG and JPG as they are, PDF figures rendered to PNG with pypdfium2, and EPS as "figure not renderable". Stale and invented-number badges are shown.
 - **Controls:** relevance (yes, partly, no), a Flag control on each field (a kind plus an optional note), and deep read (yes or no).
-- **Timing:** a server-side timer runs from render to submit. The next Card loads automatically.
+- **Keys:** `j`/`k` field, `[`/`]` section, `o` quotes, `f` Flag (then `1`–`4` for the kind, a note, Enter), `y`/`p`/`n` relevance, `d` deep read, `s` save, `r` raw LaTeX, `?` the key list.
+- **Timing:** a server-side timer runs from render to submit, and the top bar shows a clock (amber at 4:00, red at 5:00). The next Card loads automatically.
 - **Export:** an "Export to Markdown" button.
+
+**Page conventions** for every page:
+- **Top bar:** fixed to the top, with the nav, the page's subject (for `/review`: arXiv id, version, authors, title), status badges, and a row of section pills under it.
+- **Hover help:** every badge, pill and control has hover text for a new user, kept in one shared dictionary so it reads the same everywhere.
+- **Shared look:** support and status colours, HTMX for writes, `?` for keys.
 
 ### `/monitor`
 
