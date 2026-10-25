@@ -194,21 +194,22 @@ def test_the_mark_stays_unless_every_set_succeeds(installed):
     assert len(rows(installed, "SELECT * FROM papers")) == 1
 
 
-# The `cards` table arrives with the Read call (migration 003_cards); until then the tests make
-# the SPEC §6 columns Watch touches.
-CARDS = (
-    "CREATE TABLE IF NOT EXISTS cards (id INTEGER PRIMARY KEY, arxiv_id TEXT NOT NULL,"
-    " version INTEGER NOT NULL, card_json TEXT NOT NULL DEFAULT '{}', status TEXT NOT NULL)"
-)
-
-
 def add_card(phy_home, arxiv_id, version, status="reviewed"):
+    """A Card as Read writes it (with the run that made it), moved on to `status`."""
     conn = sqlite3.connect(phy_home / "phy.db")
+    run_id = f"run-{arxiv_id}v{version}"
     with conn:
-        conn.execute(CARDS)
         conn.execute(
-            "INSERT INTO cards (arxiv_id, version, status) VALUES (?, ?, ?)",
-            (arxiv_id, version, status),
+            "INSERT INTO runs (id, stage, arxiv_id, status, started_at)"
+            " VALUES (?, 'read', ?, 'ok', '2026-10-25T00:00:00+00:00')",
+            (run_id, arxiv_id),
+        )
+        conn.execute(
+            "INSERT INTO cards (arxiv_id, version, card_json, status, model, prompt_version,"
+            " schema_version, run_id, created_at, updated_at) VALUES (?, ?, '{}', ?,"
+            " 'claude-sonnet-5-5', 'v2', 'card/v1', ?, '2026-10-25T00:00:00+00:00',"
+            " '2026-10-25T00:00:00+00:00')",
+            (arxiv_id, version, status, run_id),
         )
     conn.close()
 

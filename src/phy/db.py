@@ -159,9 +159,6 @@ def upsert_paper(conn: sqlite3.Connection, record: ArxivRecord) -> Upserted:
 
 def mark_cards_stale(conn: sqlite3.Connection, arxiv_id: str, latest_version: int) -> int:
     """Make the Cards of older versions of a Paper Stale; returns how many changed."""
-    # `cards` arrives with the Read call (migration 003_cards); before it there is nothing to do.
-    if not conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'cards'").fetchone():
-        return 0
     with conn:
         return conn.execute(
             "UPDATE cards SET status = 'stale'"
