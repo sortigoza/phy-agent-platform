@@ -1,0 +1,38 @@
+# PROTOTYPE stand-in for $PHY_HOME/questions.yaml (QUICK_START §2 shape, all 4 questions of SPEC §4).
+# New in this proposal: top-level `scope_notes`, the prose half of the SPEC's "negative keywords",
+# which only a model can apply. `keywords`/`negative_keywords`/`physics_terms` stay code-only (pre-filter).
+questions:
+  - id: Q1
+    title: Generative sampling for lattice field theory
+    description: >
+      How well do normalizing flows, diffusion models and related samplers beat
+      critical slowing down and topological freezing? How do they scale with volume and with gauge symmetry?
+    keywords: [normalizing flow, diffusion model, generative, sampler, topological freezing, critical slowing down]
+    negative_keywords: []
+  - id: Q2
+    title: Neural quantum states
+    description: >
+      Which neural-network wavefunction architectures reach state-of-the-art ground-state energies
+      or dynamics, compared with DMRG, tensor networks and QMC?
+    keywords: [neural quantum state, neural-network quantum state, variational wavefunction, restricted Boltzmann machine, ansatz]
+    negative_keywords: []
+  - id: Q3
+    title: Symmetry and physics constraints in architectures
+    description: >
+      Gauge equivariance, conservation laws and other physics built into architectures, and what each
+      buys in accuracy or sample efficiency on physics problems.
+    keywords: [equivariant, equivariance, gauge invariant, symmetry, conservation law]
+    negative_keywords: []
+  - id: Q4
+    title: ML for observables and phases
+    description: >
+      Machine learning for phase detection and phase transitions, and for inverse problems such as
+      spectral reconstruction.
+    keywords: [phase transition, phase classification, order parameter, spectral reconstruction, inverse problem]
+    negative_keywords: []
+physics_terms: [lattice, gauge, Hamiltonian, spin, fermion, QCD, many-body]
+negative_keywords: [quantum hardware, superconducting qubit fabrication]
+scope_notes:
+  - '"Renormalization" or "lattice" used only in a machine-learning sense, with no physical system.'
+  - Quantum-computing hardware, devices or benchmarks of quantum processors.
+  - Machine-learning methods or benchmarks with no physics application.

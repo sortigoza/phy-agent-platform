@@ -1,0 +1,234 @@
+[
+ {
+  "arxiv_id": "1904.12072",
+  "title": "Flow-based generative models for Markov chain Monte Carlo in lattice field theory",
+  "authors": [
+   "M. S. Albergo",
+   "G. Kanwar",
+   "P. E. Shanahan"
+  ],
+  "categories": [
+   "hep-lat",
+   "cond-mat.dis-nn",
+   "cond-mat.stat-mech",
+   "cs.LG"
+  ],
+  "abstract": "A Markov chain update scheme using a machine-learned flow-based generative model is proposed for Monte Carlo sampling in lattice field theories. The generative model may be optimized (trained) to produce samples from a distribution approximating the desired Boltzmann distribution determined by the lattice action of the theory being studied. Training the model systematically improves autocorrelation times in the Markov chain, even in regions of parameter space where standard Markov chain Monte Carlo algorithms exhibit critical slowing down in producing decorrelated updates. Moreover, the model may be trained without existing samples from the desired distribution. The algorithm is compared with HMC and local Metropolis sampling for $\u03c6^4$ theory in two dimensions."
+ },
+ {
+  "arxiv_id": "2003.06413",
+  "title": "Equivariant flow-based sampling for lattice gauge theory",
+  "authors": [
+   "Gurtej Kanwar",
+   "Michael S. Albergo",
+   "Denis Boyda",
+   "Kyle Cranmer",
+   "Daniel C. Hackett",
+   "S\u00e9bastien Racani\u00e8re",
+   "Danilo Jimenez Rezende",
+   "Phiala E. Shanahan"
+  ],
+  "categories": [
+   "hep-lat",
+   "cond-mat.stat-mech",
+   "cs.LG"
+  ],
+  "abstract": "We define a class of machine-learned flow-based sampling algorithms for lattice gauge theories that are gauge-invariant by construction. We demonstrate the application of this framework to U(1) gauge theory in two spacetime dimensions, and find that near critical points in parameter space the approach is orders of magnitude more efficient at sampling topological quantities than more traditional sampling procedures such as Hybrid Monte Carlo and Heat Bath."
+ },
+ {
+  "arxiv_id": "2002.12347",
+  "title": "Leading hadronic contribution to the muon magnetic moment from lattice QCD",
+  "authors": [
+   "Sz. Borsanyi",
+   "Z. Fodor",
+   "J. N. Guenther",
+   "C. Hoelbling",
+   "S. D. Katz",
+   "L. Lellouch",
+   "T. Lippert",
+   "K. Miura",
+   "L. Parato",
+   "K. K. Szabo",
+   "F. Stokes",
+   "B. C. Toth",
+   "Cs. Torok",
+   "L. Varnhorst"
+  ],
+  "categories": [
+   "hep-lat",
+   "hep-ph"
+  ],
+  "abstract": "We compute the leading order hadronic vacuum polarization (LO-HVP) contribution to the anomalous magnetic moment of the muon, $(g_\u03bc-2)$, using lattice QCD. Calculations are performed with four flavors of 4-stout-improved staggered quarks, at physical quark masses and at six values of the lattice spacing down to 0.064~fm. All strong isospin breaking and electromagnetic effects are accounted for to leading order. The infinite-volume limit is taken thanks to simulations performed in volumes of sizes up to 11~fm. Our result for the LO-HVP contribution to $(g_\u03bc-2)$ has a total uncertainty of 0.8\\%. Compared to the result of the dispersive approach for this contribution, ours significantly reduces the tension between the standard model prediction for $(g_\u03bc-2)$ and its measurement."
+ },
+ {
+  "arxiv_id": "1910.11333",
+  "title": "Supplementary information for \"Quantum supremacy using a programmable superconducting processor\"",
+  "authors": [
+   "Frank Arute",
+   "Kunal Arya",
+   "Ryan Babbush",
+   "Dave Bacon",
+   "Joseph C. Bardin",
+   "Rami Barends",
+   "Rupak Biswas",
+   "Sergio Boixo",
+   "Fernando G. S. L. Brandao",
+   "David A. Buell",
+   "Brian Burkett",
+   "Yu Chen",
+   "Zijun Chen",
+   "Ben Chiaro",
+   "Roberto Collins",
+   "William Courtney",
+   "Andrew Dunsworth",
+   "Edward Farhi",
+   "Brooks Foxen",
+   "Austin Fowler",
+   "Craig Gidney",
+   "Marissa Giustina",
+   "Rob Graff",
+   "Keith Guerin",
+   "Steve Habegger",
+   "Matthew P. Harrigan",
+   "Michael J. Hartmann",
+   "Alan Ho",
+   "Markus R. Hoffmann",
+   "Trent Huang",
+   "Travis S. Humble",
+   "Sergei V. Isakov",
+   "Evan Jeffrey",
+   "Zhang Jiang",
+   "Dvir Kafri",
+   "Kostyantyn Kechedzhi",
+   "Julian Kelly",
+   "Paul V. Klimov",
+   "Sergey Knysh",
+   "Alexander N. Korotkov",
+   "Fedor Kostritsa",
+   "David Landhuis",
+   "Mike Lindmark",
+   "Erik Lucero",
+   "Dmitry Lyakh",
+   "Salvatore Mandra",
+   "Jarrod R. McClean",
+   "Matt McEwen",
+   "Anthony Megrant",
+   "Xiao Mi",
+   "Kristel Michielsen",
+   "Masoud Mohseni",
+   "Josh Mutus",
+   "Ofer Naaman",
+   "Matthew Neeley",
+   "Charles Neill",
+   "Murphy Yuezhen Niu",
+   "Eric Ostby",
+   "Andre Petukhov",
+   "John C. Platt",
+   "Chris Quintana",
+   "Eleanor G. Rieffel",
+   "Pedram Roushan",
+   "Nicholas C. Rubin",
+   "Daniel Sank",
+   "Kevin J. Satzinger",
+   "Vadim Smelyanskiy",
+   "Kevin J. Sung",
+   "Matthew D. Trevithick",
+   "Amit Vainsencher",
+   "Benjamin Villalonga",
+   "Theodore White",
+   "Z. Jamie Yao",
+   "Ping Yeh",
+   "Adam Zalcman",
+   "Hartmut Neven",
+   "John M. Martinis"
+  ],
+  "categories": [
+   "quant-ph"
+  ],
+  "abstract": "This is an updated version of supplementary information to accompany \"Quantum supremacy using a programmable superconducting processor\", an article published in the October 24, 2019 issue of Nature. The main article is freely available at https://www.nature.com/articles/s41586-019-1666-5. Summary of changes since arXiv:1910.11333v1 (submitted 23 Oct 2019): added URL for qFlex source code; added Erratum section; added Figure S41 comparing statistical and total uncertainty for log and linear XEB; new References [1,65]; miscellaneous updates for clarity and style consistency; miscellaneous typographical and formatting corrections."
+ },
+ {
+  "arxiv_id": "1709.06680",
+  "title": "Deep Lattice Networks and Partial Monotonic Functions",
+  "authors": [
+   "Seungil You",
+   "David Ding",
+   "Kevin Canini",
+   "Jan Pfeifer",
+   "Maya Gupta"
+  ],
+  "categories": [
+   "stat.ML",
+   "cs.LG"
+  ],
+  "abstract": "We propose learning deep models that are monotonic with respect to a user-specified set of inputs by alternating layers of linear embeddings, ensembles of lattices, and calibrators (piecewise linear functions), with appropriate constraints for monotonicity, and jointly training the resulting network. We implement the layers and projections with new computational graph nodes in TensorFlow and use the ADAM optimizer and batched stochastic gradients. Experiments on benchmark and real-world datasets show that six-layer monotonic deep lattice networks achieve state-of-the art performance for classification and regression with monotonicity guarantees."
+ },
+ {
+  "arxiv_id": "1602.07576",
+  "title": "Group Equivariant Convolutional Networks",
+  "authors": [
+   "Taco S. Cohen",
+   "Max Welling"
+  ],
+  "categories": [
+   "cs.LG",
+   "stat.ML"
+  ],
+  "abstract": "We introduce Group equivariant Convolutional Neural Networks (G-CNNs), a natural generalization of convolutional neural networks that reduces sample complexity by exploiting symmetries. G-CNNs use G-convolutions, a new type of layer that enjoys a substantially higher degree of weight sharing than regular convolution layers. G-convolutions increase the expressive capacity of the network without increasing the number of parameters. Group convolution layers are easy to use and can be implemented with negligible computational overhead for discrete groups generated by translations, reflections and rotations. G-CNNs achieve state of the art results on CIFAR10 and rotated MNIST."
+ },
+ {
+  "arxiv_id": "1807.03039",
+  "title": "Glow: Generative Flow with Invertible 1x1 Convolutions",
+  "authors": [
+   "Diederik P. Kingma",
+   "Prafulla Dhariwal"
+  ],
+  "categories": [
+   "stat.ML",
+   "cs.AI",
+   "cs.LG"
+  ],
+  "abstract": "Flow-based generative models (Dinh et al., 2014) are conceptually attractive due to tractability of the exact log-likelihood, tractability of exact latent-variable inference, and parallelizability of both training and synthesis. In this paper we propose Glow, a simple type of generative flow using an invertible 1x1 convolution. Using our method we demonstrate a significant improvement in log-likelihood on standard benchmarks. Perhaps most strikingly, we demonstrate that a generative model optimized towards the plain log-likelihood objective is capable of efficient realistic-looking synthesis and manipulation of large images. The code for our model is available at https://github.com/openai/glow"
+ },
+ {
+  "arxiv_id": "1605.01735",
+  "title": "Machine learning phases of matter",
+  "authors": [
+   "Juan Carrasquilla",
+   "Roger G. Melko"
+  ],
+  "categories": [
+   "cond-mat.str-el"
+  ],
+  "abstract": "Neural networks can be used to identify phases and phase transitions in condensed matter systems via supervised machine learning. Readily programmable through modern software libraries, we show that a standard feed-forward neural network can be trained to detect multiple types of order parameter directly from raw state configurations sampled with Monte Carlo. In addition, they can detect highly non-trivial states such as Coulomb phases, and if modified to a convolutional neural network, topological phases with no conventional order parameter. We show that this classification occurs within the neural network without knowledge of the Hamiltonian or even the general locality of interactions. These results demonstrate the power of machine learning as a basic research tool in the field of condensed matter and statistical physics."
+ },
+ {
+  "arxiv_id": "1606.02318",
+  "title": "Solving the Quantum Many-Body Problem with Artificial Neural Networks",
+  "authors": [
+   "Giuseppe Carleo",
+   "Matthias Troyer"
+  ],
+  "categories": [
+   "cond-mat.dis-nn",
+   "cond-mat.quant-gas",
+   "quant-ph"
+  ],
+  "abstract": "The challenge posed by the many-body problem in quantum physics originates from the difficulty of describing the non-trivial correlations encoded in the exponential complexity of the many-body wave function. Here we demonstrate that systematic machine learning of the wave function can reduce this complexity to a tractable computational form, for some notable cases of physical interest. We introduce a variational representation of quantum states based on artificial neural networks with variable number of hidden neurons. A reinforcement-learning scheme is then demonstrated, capable of either finding the ground-state or describing the unitary time evolution of complex interacting quantum systems. We show that this approach achieves very high accuracy in the description of equilibrium and dynamical properties of prototypical interacting spins models in both one and two dimensions, thus offering a new powerful tool to solve the quantum many-body problem."
+ },
+ {
+  "arxiv_id": "1410.3831",
+  "title": "An exact mapping between the Variational Renormalization Group and Deep Learning",
+  "authors": [
+   "Pankaj Mehta",
+   "David J. Schwab"
+  ],
+  "categories": [
+   "stat.ML",
+   "cond-mat.stat-mech",
+   "cs.LG",
+   "cs.NE"
+  ],
+  "abstract": "Deep learning is a broad set of techniques that uses multiple layers of representation to automatically learn relevant features directly from structured data. Recently, such techniques have yielded record-breaking results on a diverse set of difficult machine learning tasks in computer vision, speech recognition, and natural language processing. Despite the enormous success of deep learning, relatively little is understood theoretically about why these techniques are so successful at feature learning and compression. Here, we show that deep learning is intimately related to one of the most important and successful techniques in theoretical physics, the renormalization group (RG). RG is an iterative coarse-graining scheme that allows for the extraction of relevant features (i.e. operators) as a physical system is examined at different length scales. We construct an exact mapping from the variational renormalization group, first introduced by Kadanoff, and deep learning architectures based on Restricted Boltzmann Machines (RBMs). We illustrate these ideas using the nearest-neighbor Ising Model in one and two-dimensions. Our results suggests that deep learning algorithms may be employing a generalized RG-like scheme to learn relevant features from data."
+ }
+]
