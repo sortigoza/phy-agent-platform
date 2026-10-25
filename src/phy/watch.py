@@ -75,8 +75,9 @@ def _harvest(ctx: Ctx, *, since: date | None, reset: bool) -> date | None:
     # A `--since` window later than the mark leaves a gap before it, so it cannot move the mark.
     covers_mark = since is None or (mark is not None and since <= mark)
     if covers_mark:
-        mark = max(filter(None, [mark, min(first_response_dates)]))
-        db.set_state(ctx.db, HWM, mark.isoformat())
+        mark = max(filter(None, [mark, min(first_response_dates, default=None)]), default=None)
+        if mark:
+            db.set_state(ctx.db, HWM, mark.isoformat())
     db.set_state(ctx.db, LAST_SUCCESS, datetime.now(UTC).isoformat(timespec="seconds"))
     log.info("watch.finished", mark=mark.isoformat() if mark else None, mark_moved=covers_mark)
     return mark

@@ -95,7 +95,6 @@ def record_run(
 
 
 Upserted = Literal["new_paper", "new_version", "metadata_only", "unchanged"]
-PAPER_METADATA = ["title", "authors", "abstract", "categories", "primary_category", "license"]
 
 
 def upsert_paper(conn: sqlite3.Connection, record: ArxivRecord) -> Upserted:
