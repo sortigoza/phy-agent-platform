@@ -1,0 +1,11 @@
+# Instance data: never committed (arXiv ToU: full texts stay local).
+# Commit config.toml, questions.yaml, golden/ and CHANGELOG.md yourself; phy never commits.
+phy.db
+phy.db-*
+phy.lock
+arxiv.lock
+app/
+papers/
+golden_sources/
+runs/
+logs/

@@ -1,0 +1,82 @@
+# phy instance config. Every knob is listed in QUICK_START §7; change one at a time and
+# check the Instrument it affects. Unknown or invalid keys stop every command.
+
+[watch]
+backfill_days = 14   # how far back the first run (or one after `phy watch --reset`) starts
+sets = [
+  "physics:hep-lat",
+  "physics:cond-mat:dis-nn",
+  "physics:cond-mat:str-el",
+  "physics:quant-ph",
+  "physics:cond-mat:stat-mech",
+  "physics:physics:comp-ph",
+  "cs:cs:LG",
+  "stat:stat:ML",
+]
+
+[watch.prefilter]    # per set: none, keywords or keywords+physics
+"physics:hep-lat" = "none"
+"physics:cond-mat:dis-nn" = "none"
+"physics:cond-mat:str-el" = "none"
+"physics:quant-ph" = "keywords"
+"physics:cond-mat:stat-mech" = "keywords"
+"physics:physics:comp-ph" = "keywords"
+"cs:cs:LG" = "keywords+physics"
+"stat:stat:ML" = "keywords+physics"
+
+[arxiv]
+min_interval_s = 3.0   # never below 3 (arXiv ToU)
+max_retries = 3
+
+[filter]
+model = "claude-haiku-5-5"
+effort = "low"
+threshold = 0.5
+prompt_version = "v1"
+
+[read]
+daily_quota = 8
+always_threshold = 0.9
+weekly_ceiling = 50
+model = "claude-sonnet-5-5"
+effort = "medium"
+prompt_version = "v1"
+recard_stale = "relevant_only"   # relevant_only, all or never
+
+[verify]
+normalize = ["whitespace", "quotes", "dashes", "latex_spacing"]
+
+[budget]
+weekly_usd = 20.0
+
+# USD per million tokens, 2026-10 list prices (Haiku: prompts up to 100K tokens).
+[prices.claude-haiku-5-5]
+input = 0.10
+output = 0.50
+cache_write = 0.125
+cache_read = 0.01
+
+[prices.claude-sonnet-5-5]
+input = 2.00
+output = 10.00
+cache_write = 2.50
+cache_read = 0.20
+
+[prices.claude-opus-5-5]
+input = 4.00
+output = 20.00
+cache_write = 5.00
+cache_read = 0.20
+
+[alerts]
+candidates_range = [100, 400]
+unsupported_rate = 0.10
+review_minutes = 5
+minutes_per_relevant = 8
+wasted_minutes = 40
+
+[roi]
+baseline_minutes = 15
+
+[ui]
+port = 8000

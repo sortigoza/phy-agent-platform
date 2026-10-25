@@ -1,7 +1,7 @@
 # Skeleton and phy init
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: —
 
 ## Goal
