@@ -136,6 +136,9 @@ All knobs live in `config.toml` unless noted. Change one at a time, and check th
 | `alerts.candidates_range` | `[100, 400]` | Bounds of the Candidates/week tile | Week 1 shows the real volume |
 | `alerts.unsupported_rate` | `0.10` | Red line for unsupported fields | Rarely |
 | `alerts.review_minutes` | `5` | Red line for median review time | Rarely; trim the Card instead |
+| `alerts.minutes_per_relevant` | `8` | Red line for your review minutes per relevant Card | Rarely; check whether review time or precision moved |
+| `alerts.wasted_minutes` | `40` | Red line for weekly minutes spent reviewing Cards you rated no | Precision targets change |
+| `roi.baseline_minutes` | `15` | Minutes a paper would take you without the platform (a skim, not a full read); feeds the time multiplier | You time a few skims and get a different number |
 | `ui.port` | `8000` | Port the UI binds to on `127.0.0.1` | The port is taken |
 
 ### Golden set

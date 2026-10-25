@@ -47,7 +47,7 @@ v1 succeeds when the Reader absorbs 30 relevant papers a week with no more than 
 | Milestone | Delivers | Exit criteria |
 | --- | --- | --- |
 | **M0: Cards on screen** (target ≈ 1 week of building) | Watch (OAI-PMH, high-water mark), Filter, Read, Verify (code checks only), review UI, Monitoring page, run viewer, Golden eval on ≤ 4 Placeholder Dev Papers (code checks plus run-to-run diff), weekly spend guardrail, launchd schedule | First Card for arXiv:1904.12072 reviewed in the UI. 7 consecutive days of unattended runs with the high-water mark advancing. Every M0 Instrument tile populated. |
-| **M1: Trust** | Model reviewer in Verify. Model-judged field accuracy on Trusted Papers. Held-out split. Missed-papers log. macOS notifications. "Deep read blind" toggle. Batch API switch. | ≥ 1 Trusted Golden Paper. Success criteria measurable. |
+| **M1: Trust** | Model reviewer in Verify. Model-judged field accuracy on Trusted Papers. Held-out split. Missed-papers log. macOS notifications. "Deep read blind" toggle. Batch API switch. Attention-budget tile: Reader minutes per week (Reviews, deep reads, upkeep) against the 4.5 h budget, once deep-read and Meta-work minutes are recorded. | ≥ 1 Trusted Golden Paper. Success criteria measurable. |
 | **M2: Synthesis and meta-agents** | Synthesize (claims, contradictions), weekly Digest, Improver agent (Agent SDK), optional Langfuse via the Tracer interface, citation tracking (OpenAlex or Semantic Scholar) | Defined after M1 has run for 4 weeks |
 
 ### Non-goals for v1
@@ -378,6 +378,10 @@ Shows the Instrument tiles and the weekly funnel, with the page conventions (top
 | Median review time | Is the Card well designed? | reviews | > 5 min | Shorten or reorder the Card |
 | Cost per Carded paper | Is it affordable? | runs | median over papers (every run tied to the paper, retries included) > 2× the median of the 7 days from the first Card | Find which Stage grew |
 | Weekly spend vs guardrail | Is it affordable? | runs | ≥ 80% of `budget.weekly_usd` | Check the volume; raise the limit deliberately |
+| Reader minutes per relevant paper | Is it affordable? | reviews | > `alerts.minutes_per_relevant` (8) over 7 days | Find which grew: review time (trim the Card) or the share of "no" (tighten the Filter) |
+| Minutes spent on "no" Cards | Is it affordable? | reviews | > `alerts.wasted_minutes` (40) over 7 days | Raise `filter.threshold` or add scope notes |
+
+**Time is a cost too.** The two Reader-time tiles count only Review time, the one Reader activity M0 records. Reader minutes per relevant paper is `sum(seconds_spent)` over the Reviews rated yes or partly. Its note carries the **time multiplier**: relevant papers × `roi.baseline_minutes` ÷ Reader minutes, where the baseline is what getting the same out of a paper costs without the platform (abstract, introduction, figures, conclusions), not a full read. It is a note, not a red rule, because no single action follows from it. Minutes spent on "no" Cards is what the Filter's imprecision costs in the Reader's own time.
 
 **Funnel:** harvested → Candidates → Screened in → Carded → verified → reviewed → relevant (yes or partly) → deep read, each step counting what happened in the last 7 days, with each step's % of the one before. Because these are activity counts, not a cohort, a step can exceed 100% (reviewing last week's Cards). A sudden narrowing between two steps points to the Stage to inspect.
 
@@ -494,3 +498,5 @@ M0 costs roughly $10 a week, dominated by Read. M1's Batch switch roughly halves
 - **The Improver agent's tool surface and approval flow.** This is decided in M2. It reads Flags, `runs` and `eval_runs`, writes new prompt versions, and runs `phy eval`. A human always switches the active version.
 - **Embeddings for claims.** Candidates are `sqlite-vec` or brute force over a few thousand rows. Decided in M2.
 - **Pre-filter `none` for all sets.** Revisited after week-1 volumes and the first missed-papers data.
+- **Trust-discounted time multiplier.** A Card with a `wrong_value` Flag didn't save the Reader time, so the multiplier could discount Flagged Cards. Decided once Flag rates are known, in M1 or later.
+- **`roi.baseline_minutes`.** The default of 15 is a guess. It is recalibrated by timing a few skims and deep reads.

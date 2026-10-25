@@ -50,4 +50,9 @@ The exact queries are in `QUERIES` in the prototype (`q` shows them on the page)
 
 **Spec changes made:** SPEC §9 `/monitor` (layout, tile anatomy, windows, queries, sharpened red rules, funnel) and `/runs`; the §5 diagram.
 
+**Addendum: time as a cost** (decided with the Reader after closing). Two tiles join "Is it affordable?":
+- **Reader minutes per relevant paper:** review minutes ÷ Cards rated yes or partly, over 7 days; red above `alerts.minutes_per_relevant` (8). Its note shows the time multiplier, relevant × `roi.baseline_minutes` (15, a skim, not a full read) ÷ Reader minutes. The multiplier is a note, not a red rule, because no single action follows from it.
+- **Minutes spent on "no" Cards:** red above `alerts.wasted_minutes` (40) a week.
+Both need no new columns. The attention-budget tile (all Reader minutes against 4.5 h) moves to M1, once deep-read and upkeep minutes are recorded. A trust-discounted multiplier is a deferred decision (SPEC §14).
+
 **Assets:** branch `prototype/monitor-page` (commit `06e82ed`, never merged, pushed to `origin`); the code is in `.scratch/m0/prototypes/monitor/` (`.venv/bin/python app.py`, `/monitor?variant=A|B|C|D&scenario=healthy|broken|fresh`).
