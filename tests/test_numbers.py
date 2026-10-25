@@ -40,18 +40,23 @@ def parsed(text):
         ("costs O(V^2)", []),
         ("m_p and x_1 and x_{12}", []),
         ("a 2D lattice, the 3rd case", []),
-        (r"\section2 and \ss3", []),
+        (r"\3 and \\4", []),
+        (r"$V^{-2}$, $a^-1$ and $x_{-1}$", []),
         ("SU3 and H2O", []),
         # mixed: the glued ones skipped, the rest kept
         ("keep m_p L ≈ 4 on a 2D lattice", ["4"]),
         (r"$0.3\lesssim z_\mathcal{O}\lesssim 2.0$", ["0.3", "2.0"]),
-        (r"$1 / \sqrt{N}$ with $N=10^4$", ["1", "10"]),
+        (r"$1 / \sqrt{N}$ with $N=10^4$", ["1", "10^4"]),
+        (r"$10^{-3}$ and 10⁻³", ["10^{-3}", "10⁻³"]),
+        # digits after a control word belong to no identifier
+        (r"$4.03\pm0.06$", ["4.03", "0.06"]),
+        (r"$(4.03\pm0.06)\times10^{-3}$", ["4.03", "0.06", "10^{-3}"]),
         # words are ignored
         ("one to two GPU-weeks", []),
         # no digits stolen from a longer token
         ("12D", []),
         ("1.25D", []),
-        ("version 1.2.3", ["1.2", "3"]),
+        ("version 1.2.3 and .5", ["1.2"]),
     ],
 )
 def test_extractor(text, expected):
@@ -72,6 +77,7 @@ def one(text):
         ("-4", "4"),
         ("70%", "70"),
         ("6.0E+2", "6.0e2"),
+        (r"$10^{-3}$", "1e-3"),
     ],
 )
 def test_equal_numbers(a, b):
