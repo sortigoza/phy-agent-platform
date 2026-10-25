@@ -189,12 +189,20 @@
           ],
           "title": "Support",
           "type": "string"
+        },
+        "ungrounded_numbers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ungrounded Numbers",
+          "type": "array"
         }
       },
       "required": [
         "evidence",
         "value",
-        "support"
+        "support",
+        "ungrounded_numbers"
       ],
       "title": "VerifiedLimitation",
       "type": "object"

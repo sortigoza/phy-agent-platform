@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from phy.card import Card, CardDraft, Quote
+from phy.card import Card, CardDraft, KeyEquation, KeyFigure, Quote
 from phy.cli import app
 from phy.config import resolve_paths
 from phy.locks import phy_lock
@@ -303,10 +303,11 @@ def test_recorded_draft_gets_the_expected_support():
         "supported",
         "supported",
     ]
-    assert [f.support for f in card.assumptions] == ["supported", "supported", "inferred"]
-    assert card.system.support == "supported"
-    assert card.method.support == "inferred"
-    assert card.baselines.support == "supported"
+    # 50% and 70% (assumptions[2]) and the couplings (system) are not in this source
+    assert [f.support for f in card.assumptions] == ["supported", "supported", "unsupported"]
+    assert card.system.support == "unsupported"
+    assert (card.method.support, card.method.ungrounded_numbers) == ("inferred", ["8", "12"])
+    assert card.baselines.support == "unsupported"
     assert card.claimed_advance.support == "supported"
     assert card.code_data is None
     assert [f.support for f in card.limitations_stated] == [
@@ -314,7 +315,15 @@ def test_recorded_draft_gets_the_expected_support():
         "unsupported",  # not in the source
         "supported",
     ]
-    assert (verified.unsupported_count, verified.inferred_count) == (2, 2)
+    assert (verified.unsupported_count, verified.inferred_count) == (5, 1)
+    assert [(n.field, n.number) for n in verified.invented_numbers] == [
+        ("assumptions[2]", "50"),
+        ("assumptions[2]", "70"),
+        ("system", "4"),
+        ("system", "6.975"),
+        ("system", "5.113"),
+        ("baselines", "70"),
+    ]
     assert card.system.evidence[0].loc == 'Sec. "Results"'
     assert card.claimed_advance.evidence[0].loc == "Abstract"
     assert card.method.evidence[0].loc == 'Sec. "Introduction"'
@@ -339,6 +348,191 @@ def test_every_quote_on_a_fact_must_be_found():
     assert card.assumptions[0].support == "unsupported"
     assert card.assumptions[1].support == "supported"
     assert card.system.support == "unsupported"
+
+
+def verified_with(source=SEED_LIKE, **updates):
+    return verify_card(RECORDED_DRAFT.model_copy(update=updates), Source(source, "latex"))
+
+
+def invented(verified, field):
+    return [n.number for n in verified.invented_numbers if n.field == field]
+
+
+def with_value(fact, value, **updates):
+    return fact.model_copy(update={"value": value, **updates})
+
+
+ASSUMPTION = RECORDED_DRAFT.assumptions[0]  # quotes "…all parameters were chosen to lie…"
+
+
+def test_a_number_in_the_tldr_missing_from_the_source_is_invented():
+    verified = verified_with(tldr="Flow-based MCMC on L=6 to 14 lattices beats HMC by 3.7x.")
+    assert invented(verified, "tldr") == ["3.7"]
+    assert verified.card.tldr == "Flow-based MCMC on L=6 to 14 lattices beats HMC by 3.7x."
+
+
+def test_a_number_in_a_value_missing_from_the_source_makes_the_fact_unsupported():
+    assumptions = [with_value(ASSUMPTION, "Parameters lie in the symmetric phase, at m^2=-4.")]
+    verified = verified_with(assumptions=assumptions)
+    assert verified.card.assumptions[0].support == "unsupported"
+    assert invented(verified, "assumptions[0]") == ["4"]
+
+
+def test_a_number_from_elsewhere_in_the_source_makes_the_fact_inferred():
+    assumptions = [with_value(ASSUMPTION, "Parameters lie in the symmetric phase, for L=6-14.")]
+    fact = verified_with(assumptions=assumptions).card.assumptions[0]
+    assert fact.support == "inferred"
+    assert fact.ungrounded_numbers == ["6", "14"]
+
+
+def test_numbers_in_the_quotes_ground_the_value():
+    system = with_value(RECORDED_DRAFT.system, "2D lattice phi^4 theory with L=6, 8, 10, 12, 14.")
+    fact = verified_with(system=system).card.system
+    assert (fact.support, fact.ungrounded_numbers) == ("supported", [])
+
+
+def test_numbers_compare_by_value_and_significant_figures():
+    assumptions = [with_value(ASSUMPTION, "The critical exponent stays below 2.00.")]
+    verified = verified_with(assumptions=assumptions)
+    assert invented(verified, "assumptions[0]") == ["2.00"]
+
+
+@pytest.mark.parametrize(
+    ("value", "inferred", "support"),
+    [
+        ("Parameters lie in the symmetric phase, at m^2=-4.", True, "unsupported"),
+        ("Parameters lie in the symmetric phase, for L=6-14.", True, "inferred"),
+        ("Parameters lie in the symmetric phase.", True, "inferred"),
+        ("Parameters lie in the symmetric phase.", False, "supported"),
+    ],
+)
+def test_support_precedence(value, inferred, support):
+    assumptions = [with_value(ASSUMPTION, value, inferred=inferred)]
+    assert verified_with(assumptions=assumptions).card.assumptions[0].support == support
+
+
+def test_a_stated_limitation_gets_the_number_checks_too():
+    limitations = [
+        with_value(RECORDED_DRAFT.limitations_stated[0], "Scaling to QCD is not studied at L=6."),
+        with_value(RECORDED_DRAFT.limitations_stated[0], "Scaling to QCD at 1.5 is not studied."),
+    ]
+    card = verified_with(limitations_stated=limitations).card
+    assert [f.support for f in card.limitations_stated] == ["inferred", "unsupported"]
+    assert card.limitations_stated[0].ungrounded_numbers == ["6"]
+
+
+LABELLED = SEED_LIKE.replace(
+    r"\section{Conclusions}",
+    r"""\section{Equations}
+\begin{equation}
+  A(\phi,\phi') = \min\left(1, \frac{\tilde{p}(\phi)}{p(\phi)}\right)
+  \label{eq:acc}
+\end{equation}
+\begin{figure}[t]
+  \includegraphics{scaling.pdf}
+  \caption{Autocorrelation time against $L$.}
+  \label{fig:tau}
+\end{figure}
+\begin{table}
+  \caption{Couplings.}\label{tab:couplings}
+\end{table}
+
+\section{Conclusions}""",
+)
+
+
+def labels_checked(equations=(), figures=()):
+    return verified_with(
+        LABELLED,
+        key_equations=[
+            KeyEquation(label=label, latex=latex, meaning="m") for label, latex in equations
+        ],
+        key_figures=[KeyFigure(label=label, why="w") for label in figures],
+    )
+
+
+def test_labels_that_check_out_give_no_warning():
+    verified = labels_checked(
+        equations=[
+            ("eq:acc", r"A(\phi,\phi') = \min\left(1, \frac{\tilde{p}(\phi)}{p(\phi)}\right)"),
+            (None, "E = mc^2"),
+        ],
+        figures=["fig:tau"],
+    )
+    assert verified.warnings == []
+
+
+def test_label_checks_warn_without_changing_support():
+    verified = labels_checked(
+        equations=[("eq:missing", "x"), ("eq:acc", r"A(\phi) = 1"), ("tab:couplings", "y")],
+        figures=["fig:missing", "tab:couplings", "sec:flowMCMC"],
+    )
+    assert [(w.kind, w.field) for w in verified.warnings] == [
+        ("unknown_label", "key_equations[0]"),
+        ("equation_mismatch", "key_equations[1]"),
+        ("equation_mismatch", "key_equations[2]"),
+        ("unknown_label", "key_figures[0]"),
+        ("figure_label_not_figure", "key_figures[1]"),
+        ("figure_label_not_figure", "key_figures[2]"),
+    ]
+    assert verified.warnings[0].detail == "eq:missing is not in the source"
+    assert [len(e.label or "") > 0 for e in verified.card.key_equations] == [True] * 3
+    assert verified.unsupported_count == verified_with().unsupported_count
+
+
+@pytest.mark.parametrize(
+    ("field", "cap"),
+    [
+        ("key_results", 5),
+        ("assumptions", 4),
+        ("limitations_stated", 4),
+        ("key_equations", 3),
+        ("key_figures", 3),
+        ("questions", 4),
+    ],
+)
+def test_an_over_cap_list_keeps_its_first_items(field, cap):
+    items = getattr(RECORDED_DRAFT, field)
+    if not items:  # the recorded draft has no key figures
+        items = [KeyFigure(label="fig:tau", why="w")]
+    items = [items[i % len(items)] for i in range(cap + 2)]
+    verified = verified_with(**{field: items})
+    kept = getattr(verified.card, field)
+    # each kept item seen as the model wrote it (without what Verify added)
+    assert [type(items[0]).model_validate(item.model_dump()) for item in kept] == items[:cap]
+    assert ("over_cap", field, "dropped 2") in [
+        (w.kind, w.field, w.detail) for w in verified.warnings
+    ]
+
+
+def test_flagged_limitations_are_capped_at_3():
+    flagged = RECORDED_DRAFT.opinion.limitations_flagged
+    opinion = RECORDED_DRAFT.opinion.model_copy(update={"limitations_flagged": flagged * 4})
+    verified = verified_with(opinion=opinion)
+    assert verified.card.opinion.limitations_flagged == (flagged * 4)[:3]
+    assert ("over_cap", "opinion.limitations_flagged") in [
+        (w.kind, w.field) for w in verified.warnings
+    ]
+
+
+def test_quotes_beyond_two_are_dropped_before_they_are_checked():
+    first = RECORDED_DRAFT.key_results[0]
+    absent = Quote(quote="This sentence appears nowhere in the paper text at all.")
+    key_results = [
+        first.model_copy(update={"evidence": [*first.evidence, *first.evidence, absent]})
+    ]
+    verified = verified_with(key_results=key_results)
+    assert len(verified.card.key_results[0].evidence) == 2
+    assert verified.card.key_results[0].support == "supported"
+    assert ("over_cap", "key_results[0].evidence", "dropped 1") in [
+        (w.kind, w.field, w.detail) for w in verified.warnings
+    ]
+
+
+def test_a_card_without_key_results_warns():
+    # The schema forbids it; Verify still says so.
+    verified = verified_with(key_results=[])
+    assert ("no_key_results", "key_results") in [(w.kind, w.field) for w in verified.warnings]
 
 
 @pytest.fixture
@@ -419,8 +613,19 @@ def test_verify_catches_up_on_every_draft_card(installed):
     assert result.exit_code == 0, result.output
     row, card = card_row(installed, "1904.12072"), card_of(installed, "1904.12072")
     assert row["status"] == "verified"
-    assert (row["unsupported_count"], row["inferred_count"]) == (2, 2)
-    assert card.system.support == "supported"
+    assert (row["unsupported_count"], row["inferred_count"]) == (5, 1)
+    assert json.loads(row["invented_numbers_json"])[0] == {
+        "field": "assumptions[2]",
+        "number": "50",
+    }
+    warnings = json.loads(row["warnings_json"])
+    assert len(warnings) == 6  # this source has none of the recorded labels
+    assert warnings[0] == {
+        "kind": "unknown_label",
+        "field": "key_equations[0]",
+        "detail": "eq:acc-rej is not in the source",
+    }
+    assert card.system.support == "unsupported"
     assert card.system.evidence[0].loc == 'Sec. "Results"'
     row = card_row(installed, "2003.06413")
     assert row["status"] == "verified"
@@ -455,7 +660,7 @@ def test_verify_paper_skips_a_verified_card_unless_forced(installed):
     result = phy("verify", "--paper", "1904.12072", "--force")
     assert result.exit_code == 0, result.output
     row = card_row(installed, "1904.12072")
-    assert (row["status"], row["unsupported_count"]) == ("verified", 2)
+    assert (row["status"], row["unsupported_count"]) == ("verified", 5)
 
 
 def test_force_keeps_a_reviewed_card_reviewed(installed):
@@ -464,7 +669,7 @@ def test_force_keeps_a_reviewed_card_reviewed(installed):
     assert phy("verify", "--paper", "1904.12072", "--force").exit_code == 0
 
     row = card_row(installed, "1904.12072")
-    assert (row["status"], row["unsupported_count"]) == ("reviewed", 2)
+    assert (row["status"], row["unsupported_count"]) == ("reviewed", 5)
 
 
 def test_force_needs_a_paper(installed):

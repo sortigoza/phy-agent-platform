@@ -106,6 +106,7 @@ class VerifiedFact(Fact):
 class VerifiedLimitation(Limitation):
     evidence: list[VerifiedQuote]
     support: Support
+    ungrounded_numbers: list[str]
 
 
 class Card(CardDraft):

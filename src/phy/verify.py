@@ -7,14 +7,20 @@
 and on `flattened.txt`, and a quote is found when canonical(quote) is a substring of
 canonical(source). It is a single pass that records the raw offset of every canonical character,
 so `loc` maps a match back to the raw text through the same code path that found it.
+
+`numbers(text)` is the one number extractor, run on canonical values, quotes and source alike:
+numbers are compared as parsed values (decimal value plus significant figures), never as
+substrings.
 """
 
 import bisect
+import json
 import re
 import sqlite3
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Literal
 
 import structlog
@@ -26,7 +32,6 @@ from phy.card import (
     CardDraft,
     Fact,
     Limitation,
-    Quote,
     Support,
     VerifiedFact,
     VerifiedLimitation,
@@ -116,6 +121,62 @@ def canonicalise_mapped(text: str, source_type: SourceType) -> tuple[str, list[i
     return "".join(out), offsets
 
 
+_SUPERSCRIPTS = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺", "0123456789-+")
+# Digits glued to an identifier are not numbers: after a letter, digit, `_`, `^` or `\\` (also
+# `^{`, `_{`), or before a letter other than an `x`/`×` multiplier. The atomic group keeps a
+# rejected token from matching a shorter prefix of itself (`12D` is not `1`).
+NUMBER = re.compile(
+    r"""
+    (?<![\w\\^])(?<!\^\{)(?<!_\{)
+    (?>
+      (?P<int>\d+)(?:\.(?P<frac>\d+))?
+      (?:\((?P<unc>\d+)\))?
+      (?:
+        [eE](?P<e>[-+−]?\d+)
+      | \s*(?:\\times|×)\s*10(?:\^\{?(?P<tex>[-+−]?\d+)\}?|(?P<sup>[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))
+      )?
+    )
+    (?:(?=[x×](?!\w))|(?!\w))
+    """,
+    re.X,
+)
+
+
+@dataclass(frozen=True)
+class Number:
+    """A parsed number: equal to another when the decimal value and significant figures match.
+    `text` is the token it came from (shared by a value and its `(d)` uncertainty)."""
+
+    value: Decimal
+    sig: int
+    text: str = field(compare=False)
+
+
+def numbers(text: str) -> list[Number]:
+    """Every number in a canonical text, in order; an error bar `4.03(6)` gives two. Signs are
+    ignored, because dashes are ambiguous (`6-14`, `m^2=-4`)."""
+    found = []
+    for m in NUMBER.finditer(text):
+        frac = m.group("frac") or ""
+        exponent = m.group("e") or m.group("tex") or (m.group("sup") or "").translate(_SUPERSCRIPTS)
+        exp = int(exponent.replace("−", "-")) if exponent else 0
+        token = m.group().strip()
+        found.append(
+            Number(
+                Decimal(f"{m.group('int')}.{frac}").scaleb(exp), _sig(m.group("int") + frac), token
+            )
+        )
+        if m.group("unc"):
+            unc = m.group("unc")
+            found.append(Number(Decimal(unc).scaleb(exp - len(frac)), _sig(unc), token))
+    return found
+
+
+def _sig(digits: str) -> int:
+    """Significant figures of a digit string: leading zeros don't count (`0.0012` has 2)."""
+    return len(digits.lstrip("0")) or 1
+
+
 class NoCard(Exception):
     """`verify --paper` named a Paper that has no Card."""
 
@@ -196,11 +257,15 @@ def _verify_one(ctx: Ctx, card: sqlite3.Row) -> None:
         verified.card.model_dump_json(),
         unsupported_count=verified.unsupported_count,
         inferred_count=verified.inferred_count,
+        invented_numbers_json=json.dumps([asdict(n) for n in verified.invented_numbers]),
+        warnings_json=json.dumps([asdict(w) for w in verified.warnings]),
     )
     log.info(
         "verify.card_verified",
         unsupported=verified.unsupported_count,
         inferred=verified.inferred_count,
+        invented=len(verified.invented_numbers),
+        warnings=len(verified.warnings),
         fields=len(facts(verified.card)),
     )
 
@@ -235,10 +300,13 @@ class _Heading:
 
 @dataclass(frozen=True)
 class _Env:
-    """A labelled environment: its raw span and every `\\label` in it, with offsets."""
+    """A labelled environment: its name, raw span, body span (inside `\\begin`…`\\end`) and
+    every `\\label` in it, with offsets."""
 
+    name: str
     start: int
     end: int
+    body: tuple[int, int]
     labels: list[tuple[int, str]]
 
     def label_for(self, at: int) -> str:
@@ -258,16 +326,18 @@ class Source:
         self.headings: list[_Heading] = []
         self.abstracts: list[tuple[int, int]] = []
         self.envs: list[_Env] = []
+        self.labels: set[str] = set()
         if source_type == "latex":
             self.headings = _headings(raw)
             boundaries += [h.at for h in self.headings]
             boundaries += [m.start() for m in re.finditer(r"\\appendix(?![a-zA-Z])", raw)]
-            self.abstracts = _envs(raw, ["abstract"])
+            self.abstracts = [(start, end) for _, start, end, _ in _envs(raw, ["abstract"])]
             self.envs = [
-                _Env(start, end, labels)
-                for start, end in _envs(raw, LABELLED_ENVS)
+                _Env(name, start, end, body, labels)
+                for name, start, end, body in _envs(raw, LABELLED_ENVS)
                 if (labels := [(m.start(), m.group(1)) for m in LABEL.finditer(raw, start, end)])
             ]
+            self.labels = {m.group(1) for m in LABEL.finditer(raw)}
         self.boundaries = sorted(boundaries)
 
     def check(self, quote: str) -> QuoteCheck:
@@ -316,54 +386,104 @@ class Source:
             where += f" · {max(enclosing, key=lambda env: env.start).label_for(at)}"
         return where
 
+    def labelled(self, label: str) -> list[_Env]:
+        """The labelled environments holding `\\label{label}`, outermost first."""
+        return [env for env in self.envs if any(key == label for _, key in env.labels)]
+
+    def env_body(self, env: _Env) -> str:
+        return canonicalise(self.raw[env.body[0] : env.body[1]], self.source_type)
+
+
+@dataclass(frozen=True)
+class InventedNumber:
+    """A number in `field`'s value (or the `tldr`) that the canonical source does not contain."""
+
+    field: str
+    number: str
+
+
+@dataclass(frozen=True)
+class CardWarning:
+    """A check that failed without changing Support, shown as a grey chip on its section."""
+
+    kind: Literal[
+        "over_cap",
+        "no_key_results",
+        "unknown_label",
+        "equation_mismatch",
+        "figure_label_not_figure",
+    ]
+    field: str
+    detail: str
+
 
 @dataclass(frozen=True)
 class Verified:
     card: Card
     unsupported_count: int
     inferred_count: int
+    invented_numbers: list[InventedNumber]
+    warnings: list[CardWarning]
 
 
 def verify_card(draft: CardDraft, source: Source) -> Verified:
-    """Check every quote on every Fact and set Support from it: a Fact is `unsupported` unless
-    it has Evidence and every quote is found, and otherwise `inferred` when the model said so."""
+    """Check every quote and number on every Fact and set Support from them, with precedence
+    `unsupported` > `inferred` > `supported`. A Fact is `unsupported` without Evidence, with a
+    quote not found, or with a number in its value the source doesn't contain (an invented
+    number); otherwise `inferred` when the model said so or a number in its value is missing
+    from its own quotes (an ungrounded number)."""
+    draft, warnings = _trim(draft)
+    source_numbers = set(numbers(source.text))
+    invented: list[InventedNumber] = []
 
-    def evidence(quotes: list[Quote]) -> tuple[list[VerifiedQuote], bool]:
-        checked = [VerifiedQuote(quote=q.quote, **vars(source.check(q.quote))) for q in quotes]
-        return checked, bool(checked) and all(q.found for q in checked)
+    def numbers_in(text: str) -> list[Number]:
+        return numbers(canonicalise(text, source.source_type))
 
-    def fact(f: Fact | None) -> VerifiedFact | None:
-        if f is None:
-            return None
-        checked, grounded = evidence(f.evidence)
+    def invented_in(path: str, value: str) -> bool:
+        missing = _unique(n.text for n in numbers_in(value) if n not in source_numbers)
+        invented.extend(InventedNumber(path, number) for number in missing)
+        return bool(missing)
+
+    def checked(path: str, f: Fact | Limitation) -> dict:
+        quotes = [VerifiedQuote(quote=q.quote, **vars(source.check(q.quote))) for q in f.evidence]
+        quoted = {n for q in f.evidence for n in numbers_in(q.quote)}
+        ungrounded = _unique(
+            n.text for n in numbers_in(f.value) if n in source_numbers and n not in quoted
+        )
+        invents = invented_in(path, f.value)
         support: Support = (
-            "unsupported" if not grounded else "inferred" if f.inferred else "supported"
+            "unsupported"
+            if not quotes or not all(q.found for q in quotes) or invents
+            else "inferred"
+            if getattr(f, "inferred", False) or ungrounded
+            else "supported"
         )
-        return VerifiedFact(
-            evidence=checked,
-            value=f.value,
-            inferred=f.inferred,
-            support=support,
-            ungrounded_numbers=[],
-        )
+        return {
+            **f.model_dump(),
+            "evidence": quotes,
+            "support": support,
+            "ungrounded_numbers": ungrounded,
+        }
 
-    def limitation(f: Limitation) -> VerifiedLimitation:
-        checked, grounded = evidence(f.evidence)
-        return VerifiedLimitation(
-            evidence=checked, value=f.value, support="supported" if grounded else "unsupported"
-        )
+    def fact(path: str, f: Fact | None) -> dict | None:
+        return None if f is None else checked(path, f)
 
+    invented_in("tldr", draft.tldr)
+    warnings += _label_warnings(draft, source)
     card = Card.model_validate(
         {
             **draft.model_dump(),
-            "key_results": [fact(f) for f in draft.key_results],
-            "assumptions": [fact(f) for f in draft.assumptions],
-            "system": fact(draft.system),
-            "method": fact(draft.method),
-            "baselines": fact(draft.baselines),
-            "claimed_advance": fact(draft.claimed_advance),
-            "limitations_stated": [limitation(f) for f in draft.limitations_stated],
-            "code_data": fact(draft.code_data),
+            "key_results": [fact(f"key_results[{i}]", f) for i, f in enumerate(draft.key_results)],
+            "assumptions": [fact(f"assumptions[{i}]", f) for i, f in enumerate(draft.assumptions)],
+            "system": fact("system", draft.system),
+            "method": fact("method", draft.method),
+            "baselines": fact("baselines", draft.baselines),
+            "claimed_advance": fact("claimed_advance", draft.claimed_advance),
+            "limitations_stated": [
+                checked(f"limitations_stated[{i}]", f)
+                for i, f in enumerate(draft.limitations_stated)
+            ],
+            "code_data": fact("code_data", draft.code_data),
         }
     )
     supports = [f.support for f in facts(card)]
@@ -371,7 +491,85 @@ def verify_card(draft: CardDraft, source: Source) -> Verified:
         card=card,
         unsupported_count=supports.count("unsupported"),
         inferred_count=supports.count("inferred"),
+        invented_numbers=invented,
+        warnings=warnings,
     )
+
+
+# The list caps the Read prompt states (SPEC §7.3); the schema doesn't enforce them.
+CAPS = {
+    "key_results": 5,
+    "assumptions": 4,
+    "limitations_stated": 4,
+    "key_equations": 3,
+    "key_figures": 3,
+    "questions": 4,
+}
+FLAGGED_CAP = 3
+EVIDENCE_CAP = 2
+
+
+def _trim(draft: CardDraft) -> tuple[CardDraft, list[CardWarning]]:
+    """The draft with every over-cap list cut to its first N, so dropped items are never
+    checked, and an `over_cap` warning per list. The raw response stays in the run trace."""
+    warnings: list[CardWarning] = []
+
+    def capped(path: str, items: list, cap: int) -> list:
+        if len(items) > cap:
+            warnings.append(CardWarning("over_cap", path, f"dropped {len(items) - cap}"))
+        return items[:cap]
+
+    def evidence(path: str, f: Fact | Limitation | None):
+        if f is None:
+            return None
+        return f.model_copy(
+            update={"evidence": capped(f"{path}.evidence", f.evidence, EVIDENCE_CAP)}
+        )
+
+    lists = {name: capped(name, getattr(draft, name), cap) for name, cap in CAPS.items()}
+    if not draft.key_results:
+        warnings.append(CardWarning("no_key_results", "key_results", "no key results"))
+    flagged = draft.opinion.limitations_flagged
+    opinion = draft.opinion.model_copy(
+        update={"limitations_flagged": capped("opinion.limitations_flagged", flagged, FLAGGED_CAP)}
+    )
+    for name in ("key_results", "assumptions", "limitations_stated"):
+        lists[name] = [evidence(f"{name}[{i}]", f) for i, f in enumerate(lists[name])]
+    singles = {
+        name: evidence(name, getattr(draft, name))
+        for name in ("system", "method", "baselines", "claimed_advance", "code_data")
+    }
+    return draft.model_copy(update={**lists, **singles, "opinion": opinion}), warnings
+
+
+def _label_warnings(draft: CardDraft, source: Source) -> list[CardWarning]:
+    """Every `key_equations` and `key_figures` label must be in the source; an equation's
+    `latex` must sit in its label's (innermost) environment, and a figure's label in a `figure`."""
+    warnings = []
+    for i, equation in enumerate(draft.key_equations):
+        path, label = f"key_equations[{i}]", equation.label
+        if label is None:
+            continue
+        if label not in source.labels:
+            warnings.append(CardWarning("unknown_label", path, f"{label} is not in the source"))
+            continue
+        envs = source.labelled(label)
+        latex = canonicalise(equation.latex, source.source_type)
+        if not envs or latex not in source.env_body(envs[-1]):
+            detail = f"latex is not in the body of {label}"
+            warnings.append(CardWarning("equation_mismatch", path, detail))
+    for i, figure in enumerate(draft.key_figures):
+        path, label = f"key_figures[{i}]", figure.label
+        if label not in source.labels:
+            warnings.append(CardWarning("unknown_label", path, f"{label} is not in the source"))
+        elif not any(env.name == "figure" for env in source.labelled(label)):
+            detail = f"{label} is not in a figure environment"
+            warnings.append(CardWarning("figure_label_not_figure", path, detail))
+    return warnings
+
+
+def _unique(items) -> list:
+    return list(dict.fromkeys(items))
 
 
 def facts(card: Card) -> list[VerifiedFact | VerifiedLimitation]:
@@ -444,16 +642,18 @@ def _braced(raw: str, at: int) -> tuple[str, int] | None:
     return None
 
 
-def _envs(raw: str, names: list[str]) -> list[tuple[int, int]]:
-    """(start, end) of every environment with one of these names, starred too, nesting allowed."""
+def _envs(raw: str, names: list[str]) -> list[tuple[str, int, int, tuple[int, int]]]:
+    """(name, start, end, body span) of every environment with one of these names, starred too,
+    nesting allowed, in order of their start."""
     spans = []
-    open_: list[tuple[str, int]] = []
+    open_: list[re.Match] = []
     for m in ENV.finditer(raw):
         kind, name = m.group(1), m.group(2)
         if name not in names:
             continue
         if kind == "begin":
-            open_.append((name, m.start()))
-        elif open_ and open_[-1][0] == name:
-            spans.append((open_.pop()[1], m.end()))
-    return spans
+            open_.append(m)
+        elif open_ and open_[-1].group(2) == name:
+            begin = open_.pop()
+            spans.append((name, begin.start(), m.end(), (begin.end(), m.start())))
+    return sorted(spans, key=lambda span: span[1])
