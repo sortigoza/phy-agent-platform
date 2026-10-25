@@ -101,6 +101,10 @@ class Paths:
     def runs(self) -> Path:
         return self.home / "runs"
 
+    def run_log(self, run_id: str) -> Path:
+        """The Tracer's full request and response for every model call of one run."""
+        return self.runs / f"{run_id}.jsonl"
+
     @property
     def git_dir(self) -> Path:
         return self.home / ".git"

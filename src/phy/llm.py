@@ -107,6 +107,15 @@ def read_card(ctx: Ctx, run: Run, paper_text: str, authors: str) -> CardDraft:
         )
     if prompt.system is None:
         raise PromptError(f"prompt {prompt.name} names no shared system prompt")
+    for key in ["model", "effort"]:
+        if getattr(prompt, key) != getattr(config, key):
+            log.warning(
+                "llm.prompt_config_differs",
+                key=key,
+                prompt=prompt.name,
+                prompt_value=getattr(prompt, key),
+                config_value=getattr(config, key),
+            )
     system = prompts.load(*prompt.system.split("/", 1)).render()
     available = {"questions": render_questions(ctx.questions), "authors": authors}
     instructions = prompt.render(**{k: v for k, v in available.items() if k in prompt.params})

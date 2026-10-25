@@ -53,7 +53,7 @@ def run(
 ) -> Prepared | Carded | AlreadyCarded:
     """`dry_run` stops after `flattened.txt` and counts its tokens instead of calling Read."""
     config = ctx.config.read
-    tracked = Run(
+    stage_run = Run(
         id=ctx.run_id,
         stage="read",
         arxiv_id=arxiv_id,
@@ -69,7 +69,7 @@ def run(
                 existing = db.get_card(ctx.db, arxiv_id, version)
                 if existing is not None and not force and not dry_run:
                     log.info("read.skipped", reason="card_exists", card_id=existing["id"])
-                    return AlreadyCarded(arxiv_id, version, existing["id"])
+                    return AlreadyCarded(arxiv_id=arxiv_id, version=version, card_id=existing["id"])
                 data, fmt, fetched = _source(ctx, arxiv, arxiv_id, version)
                 text = _flatten(ctx, arxiv_id, version, data, fmt)
                 path = ctx.paths.flattened(arxiv_id, version)
@@ -82,7 +82,7 @@ def run(
             )
         with structlog.contextvars.bound_contextvars(version=version):
             authors = db.get_paper(ctx.db, arxiv_id)["authors"]
-            draft = llm.read_card(ctx, tracked, text, authors)
+            draft = llm.read_card(ctx, stage_run, text, authors)
             card_id = db.write_draft_card(
                 ctx.db,
                 arxiv_id,
@@ -95,7 +95,7 @@ def run(
             )
             cost = db.get_run(ctx.db, ctx.run_id)["cost_usd"]
             log.info("read.card_written", card_id=card_id, replaced=existing is not None)
-    return Carded(arxiv_id, version, card_id, cost)
+    return Carded(arxiv_id=arxiv_id, version=version, card_id=card_id, cost_usd=cost)
 
 
 def _latest_version(ctx: Ctx, arxiv: Arxiv, arxiv_id: str) -> int:
