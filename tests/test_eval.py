@@ -219,7 +219,6 @@ def test_scores_match_the_hand_computed_values(golden_set, messages_api):
     assert metrics["grounding_rate"] == pytest.approx(7 / 8)
     assert (metrics["quotes"], metrics["quotes_found"]) == (8, 7)
     assert metrics["invented_numbers"] == 1
-    assert metrics["hard_fail"] is True
     assert (metrics["filter_correct"], metrics["filter_total"]) == (1, 2)
 
     a, b = json.loads(run["per_paper_json"])
@@ -327,3 +326,19 @@ def test_a_failed_call_fails_the_eval_and_stores_no_scores(golden_set, messages_
     assert rows(golden_set, "SELECT * FROM eval_runs") == []
     statuses = {r["status"] for r in rows(golden_set, "SELECT status FROM runs")}
     assert statuses == {"failed"}
+
+
+def test_a_prefilter_fail_is_screened_out_without_a_filter_call(golden_set, messages_api):
+    conn = sqlite3.connect(golden_set / "phy.db")
+    with conn:  # cs:cs:LG is keywords+physics, and B's abstract has no keyword
+        conn.execute("UPDATE papers SET sets = 'cs:cs:LG' WHERE arxiv_id = '2101.00002'")
+    conn.close()
+
+    phy("eval")
+
+    [run] = rows(golden_set, "SELECT * FROM eval_runs")
+    _, b = json.loads(run["per_paper_json"])
+    assert b["filter"]["prefilter"] == "fail"
+    assert (b["filter"]["screened_in"], b["filter"]["correct"]) == (False, True)
+    assert json.loads(run["metrics_json"])["filter_correct"] == 2
+    assert messages_api.call_count == 3

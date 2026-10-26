@@ -60,6 +60,12 @@ def _any_match(terms: list[str], text: str) -> bool:
     )
 
 
+def decide(scores: dict[str, dict], threshold: float) -> tuple[float, bool]:
+    """A Candidate's best score across the questions, and whether it is Screened in."""
+    best = max(item["score"] for item in scores.values())
+    return best, best >= threshold
+
+
 class UnknownPaper(Exception):
     pass
 
@@ -151,8 +157,7 @@ def _screen(ctx: Ctx, todo: list) -> tuple[Screened, list]:
                 log.error("filter.call_failed", error=str(e))
                 screened.failed += 1
                 continue
-            best = max(item["score"] for item in scores.values())
-            screened_in = best >= config.threshold
+            best, screened_in = decide(scores, config.threshold)
             if screened_in:
                 screened.screened_in += 1
             db.write_screening(

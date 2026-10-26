@@ -3,8 +3,9 @@ stored in `eval_runs`.
 
 Every input is checked before any model call: each frozen source must match its pinned
 sha256, the split must have Papers, and each Paper must be in `papers`, which holds Filter's
-title and abstract and Read's authors. `prompt_versions` overrides the active prompt versions.
+title, abstract and sets and Read's authors. `prompt_versions` overrides the active prompt versions.
 
+Filter runs as the Filter Stage does: a pre-filter fail is screened out in code, with no call.
 Each call is its own `eval` run (`<run_id>-<arxiv_id>v<n>-read` and `-filter`), traced as
 usual, so eval spend counts against `budget.weekly_usd`. Eval Cards are stored whole in
 `per_paper_json` and never in `cards`, so they don't count against `read.weekly_ceiling`. A
@@ -15,11 +16,12 @@ comparable.
 import json
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Literal, get_args
 
 import structlog
 
 from phy import db, golden, llm, prompts
+from phy import filter as filter_stage
 from phy.config import ConfigError
 from phy.ctx import Ctx
 from phy.prompts import PromptError
@@ -47,7 +49,9 @@ class Evaluated:
 
 
 @dataclass
-class _Input:
+class _Frozen:
+    """A Golden Paper's frozen text and its metadata, loaded before any call."""
+
     entry: golden.Entry
     paper: dict
     text: str
@@ -99,14 +103,14 @@ def _with_prompts(ctx: Ctx, overrides: dict[PromptStage, str]) -> Ctx:
     return replace(ctx, config=ctx.config.model_copy(update=updates))
 
 
-def _inputs(ctx: Ctx, manifest: golden.Manifest, split: golden.Split) -> list[_Input]:
+def _inputs(ctx: Ctx, manifest: golden.Manifest, split: golden.Split) -> list[_Frozen]:
     problems = golden.check(ctx.paths)
     if problems:
         raise Refused("frozen sources don't match the manifest: " + "; ".join(problems))
     entries = [e for e in manifest.papers if e.split == split]
     if not entries:
         raise Refused(f"the Golden set has no {split} Papers; add one with `phy golden add`")
-    for stage in ["read", "filter"]:
+    for stage in get_args(PromptStage):
         prompts.load(stage, getattr(ctx.config, stage).prompt_version)
     inputs = []
     for entry in entries:
@@ -119,7 +123,7 @@ def _inputs(ctx: Ctx, manifest: golden.Manifest, split: golden.Split) -> list[_I
             raise Refused(f"{name}: frozen flattened.txt missing")
         source = golden.frozen_source(ctx.paths, entry)
         inputs.append(
-            _Input(
+            _Frozen(
                 entry=entry,
                 paper=dict(paper),
                 text=flattened.read_text(),
@@ -129,9 +133,9 @@ def _inputs(ctx: Ctx, manifest: golden.Manifest, split: golden.Split) -> list[_I
     return inputs
 
 
-def _score(ctx: Ctx, i: _Input) -> dict:
+def _score(ctx: Ctx, frozen: _Frozen) -> dict:
     """One Paper's eval Card and Scores."""
-    entry, paper = i.entry, i.paper
+    entry, paper = frozen.entry, frozen.paper
     name = f"{entry.arxiv_id}v{entry.version}"
     read, filter_ = ctx.config.read, ctx.config.filter
     with structlog.contextvars.bound_contextvars(arxiv_id=entry.arxiv_id, version=entry.version):
@@ -142,20 +146,30 @@ def _score(ctx: Ctx, i: _Input) -> dict:
             model=read.model,
             prompt_version=read.prompt_version,
         )
-        draft = llm.read_card(ctx, read_run, i.text, paper["authors"])
-        verified = verify_card(draft, Source(i.text, i.source_type))
-        filter_run = Run(
-            id=f"{ctx.run_id}-{name}-filter",
-            stage="eval",
-            arxiv_id=entry.arxiv_id,
-            model=filter_.model,
-            prompt_version=filter_.prompt_version,
+        draft = llm.read_card(ctx, read_run, frozen.text, paper["authors"])
+        verified = verify_card(draft, Source(frozen.text, frozen.source_type))
+        prefilter = filter_stage.prefilter(
+            paper["title"],
+            paper["abstract"],
+            paper["sets"].split(),
+            ctx.config.watch.prefilter,
+            ctx.questions,
         )
-        scores = llm.screen(ctx, filter_run, paper["title"], paper["categories"], paper["abstract"])
+        scores, best, screened_in = None, None, False
+        if prefilter != "fail":
+            filter_run = Run(
+                id=f"{ctx.run_id}-{name}-filter",
+                stage="eval",
+                arxiv_id=entry.arxiv_id,
+                model=filter_.model,
+                prompt_version=filter_.prompt_version,
+            )
+            scores = llm.screen(
+                ctx, filter_run, paper["title"], paper["categories"], paper["abstract"]
+            )
+            best, screened_in = filter_stage.decide(scores, filter_.threshold)
         quotes = [q for f in facts(verified.card) for q in f.evidence]
         found = sum(q.found for q in quotes)
-        best = max(item["score"] for item in scores.values())
-        screened_in = best >= filter_.threshold
         scored = {
             "arxiv_id": entry.arxiv_id,
             "version": entry.version,
@@ -164,6 +178,7 @@ def _score(ctx: Ctx, i: _Input) -> dict:
             "grounding_rate": found / len(quotes) if quotes else None,
             "invented_numbers": [vars(n) for n in verified.invented_numbers],
             "filter": {
+                "prefilter": prefilter,
                 "scores": scores,
                 "best_score": best,
                 "screened_in": screened_in,
@@ -183,7 +198,7 @@ def _score(ctx: Ctx, i: _Input) -> dict:
 
 def _metrics(per_paper: list[dict]) -> dict:
     """The overall Scores: grounding over every quote, invented numbers (any is a hard fail),
-    and how many Filter decisions match the manifest."""
+    and how many Filter decisions match the manifest. Grounding thresholds are `eval accept`'s."""
     quotes = sum(p["quotes"] for p in per_paper)
     found = sum(p["quotes_found"] for p in per_paper)
     invented = sum(len(p["invented_numbers"]) for p in per_paper)
@@ -192,7 +207,6 @@ def _metrics(per_paper: list[dict]) -> dict:
         "quotes": quotes,
         "quotes_found": found,
         "invented_numbers": invented,
-        "hard_fail": invented > 0,
         "filter_correct": sum(p["filter"]["correct"] for p in per_paper),
         "filter_total": len(per_paper),
     }
@@ -211,11 +225,11 @@ def render(evaluated: Evaluated) -> str:
 
     lines = []
     for p in evaluated.per_paper:
-        invented = ", ".join(n["number"] for n in p["invented_numbers"])
+        numbers = [n["number"] for n in p["invented_numbers"]]
+        invented = f"{len(numbers)} ({', '.join(numbers)})" if numbers else "0"
         f = p["filter"]
         lines.append(
-            f"{p['arxiv_id']}v{p['version']}  {grounding(p)}"
-            f"  invented numbers {len(p['invented_numbers'])}{f' ({invented})' * bool(invented)}"
+            f"{p['arxiv_id']}v{p['version']}  {grounding(p)}  invented numbers {invented}"
             f"  Filter {scope(f['screened_in'])} (expected {scope(f['expect_in_scope'])})"
             f" {'ok' if f['correct'] else 'WRONG'}"
         )
@@ -223,7 +237,7 @@ def render(evaluated: Evaluated) -> str:
     lines.append(
         f"overall  {grounding(m)}  invented numbers {m['invented_numbers']}"
         f"  Filter {m['filter_correct']}/{m['filter_total']} correct"
-        + ("  hard fail: invented numbers" if m["hard_fail"] else "")
+        + ("  hard fail: invented numbers" if m["invented_numbers"] else "")
     )
     lines.append(f"eval run {evaluated.run_id}")
     return "\n".join(lines)
