@@ -35,6 +35,8 @@ SPEC §9 `/monitor` (layout, tile, links, windows, queries, the Instrument table
 
 `origin/prototype/monitor-page:.scratch/m0/prototypes/monitor/app.py` — `QUERIES` and variant D's templates.
 
+The prototype's Stage failures link passes run ids as `/runs?ids=`; the built `/runs` (12) takes arXiv ids there, so link the failures' `arxiv_id`s (with `stage=` and `status=failed`) instead.
+
 ## Not in this slice
 
 M1's attention-budget tile and notifications.

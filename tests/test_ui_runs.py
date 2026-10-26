@@ -290,3 +290,21 @@ def test_a_run_without_a_model_call_shows_its_error_line_only(home, status, erro
 
 def test_an_unknown_run_is_not_found(home):
     get("/runs/nope", status_code=404)
+
+
+def test_the_viewer_lists_each_validation_error(home, monkeypatch):
+    invalid = {**RECORDED, "content": [{"type": "text", "text": '{"tldr": 7}'}]}
+    run_id = read(home, monkeypatch, httpx.Response(200, json=invalid))
+    errors = text(section(get(f"/runs/{run_id}"), "errors"))
+    assert "fails its schema" in errors
+    assert "tldr: Input should be a valid string" in errors
+    assert "key_results: Field required" in errors
+
+
+def test_an_unreadable_log_line_is_said_not_raised(home, monkeypatch):
+    run_id = read(home, monkeypatch, httpx.Response(200, json=RECORDED))
+    with resolve_paths().run_log(run_id).open("a") as f:
+        f.write('{"run_id": "cut off')
+    doc = get(f"/runs/{run_id}")
+    assert "1 log line could not be read" in text(doc.xpath("//main")[0])
+    assert len(doc.xpath("//section[@data-section='request']")) == 1

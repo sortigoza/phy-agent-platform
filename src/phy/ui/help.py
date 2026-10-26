@@ -75,8 +75,8 @@ HELP |= {
     " and since (7d, week, or a date). Edit the address to change it.",
     "runcount": "Runs matching the filter.",
     "statuspills": "Show only the runs that ended this way, keeping the rest of the filter.",
-    "stage": "The Stage that ran: watch, filter, read or verify.",
-    "paper": "The arXiv id the run worked on; blank for a run over many papers.",
+    "runstage": "The Stage that ran: watch, filter, read or verify.",
+    "runpaper": "The arXiv id the run worked on; blank for a run over many papers.",
     "paperruns": "Every run on this paper.",
     "runstatus": "How the run ended: ok, failed, skipped (no model call) or aborted (stopped"
     " before its model call).",
@@ -87,23 +87,25 @@ HELP |= {
     " how much.",
     "st_aborted": "No model call was made: the API account was blocked (no credit, or"
     " credentials rejected), so the Stage stopped.",
-    "model": "The model the run called.",
-    "prompt": "The prompt version the run used.",
-    "tokens": "Input tokens (uncached, cache reads and cache writes together) / output tokens,"
+    "runmodel": "The model the run called.",
+    "runprompt": "The prompt version the run used.",
+    "runtokens": "Input tokens (uncached, cache reads and cache writes together) / output tokens,"
     " summed over the run's calls.",
-    "cost": "What the run's calls cost, from the prices in config.toml.",
-    "duration": "From the run's start to its end (m:ss).",
-    "started": "When the run started (UTC).",
+    "runcost": "What the run's calls cost, from the prices in config.toml.",
+    "runduration": "From the run's start to its end (m:ss).",
+    "runstarted": "When the run started (UTC).",
     "openrun": "Open the run viewer: what the run sent and got back.",
     "runid": "The run's id; its full log is $PHY_HOME/runs/<id>.jsonl.",
     "runerror": "The error the run ended with.",
     "nocall": "This run made no model call, so there is no request or response to show.",
     "missinglog": "The runs row names a log file that is not on disk (deleted or moved). The"
     " row's tokens and cost still stand.",
-    "settings": "The call's output token cap and effort.",
+    "unreadable": "Lines of the run's log that are not valid JSON, usually one cut off when the"
+    " process stopped mid-write. The other calls are shown.",
+    "callsettings": "The call's output token cap and effort.",
     "papertext": "The paper as sent to the model. Folded because it is long; click to open.",
     "systemprompt": "The system prompt, shared by the Stage's calls. Click to open.",
-    "schema": "The JSON schema the output had to follow.",
+    "callschema": "The JSON schema the output had to follow.",
     "stopreason": "Why the model stopped: end_turn is a finished answer; max_tokens means the"
     " output was cut off at the cap.",
     "callduration": "How long the call took.",
@@ -112,7 +114,7 @@ HELP |= {
     "outputerror": "The response text could not be read as JSON, usually because it was cut off.",
     "callerror": "What made this call fail: an API error, a cut-off output, or output that"
     " fails its schema.",
-    "usage": "Input tokens are split into uncached, cache reads (cheap) and cache writes"
+    "callusage": "Input tokens are split into uncached, cache reads (cheap) and cache writes"
     " (dearer); cost is from the prices in config.toml.",
 }
 

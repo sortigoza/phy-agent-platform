@@ -8,7 +8,7 @@
 
 {% block subbar %}
 <nav class="secnav" title="{{ help.statuspills }}">
-  {% for label, s, href in pills %}<a href="{{ href }}"{% if s == status %} class="on"{% endif %}>{{ label }}</a>{% endfor %}
+  {% for label, href, on in pills %}<a href="{{ href }}"{% if on %} class="on"{% endif %}>{{ label }}</a>{% endfor %}
 </nav>
 {% endblock %}
 
@@ -19,15 +19,15 @@
 {% else %}
 <table class="runs">
   <thead><tr>
-    <th title="{{ help.stage }}">Stage</th>
-    <th title="{{ help.paper }}">Paper</th>
+    <th title="{{ help.runstage }}">Stage</th>
+    <th title="{{ help.runpaper }}">Paper</th>
     <th title="{{ help.runstatus }}">Status</th>
-    <th title="{{ help.model }}">Model</th>
-    <th title="{{ help.prompt }}">Prompt</th>
-    <th class="num" title="{{ help.tokens }}">Tokens in / out</th>
-    <th class="num" title="{{ help.cost }}">Cost</th>
-    <th class="num" title="{{ help.duration }}">Duration</th>
-    <th title="{{ help.started }}">Started</th>
+    <th title="{{ help.runmodel }}">Model</th>
+    <th title="{{ help.runprompt }}">Prompt</th>
+    <th class="num" title="{{ help.runtokens }}">Tokens in / out</th>
+    <th class="num" title="{{ help.runcost }}">Cost</th>
+    <th class="num" title="{{ help.runduration }}">Duration</th>
+    <th title="{{ help.runstarted }}">Started</th>
   </tr></thead>
   <tbody>
   {% for r in runs %}

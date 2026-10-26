@@ -5,8 +5,44 @@ back, read from its `runs` row and the Tracer's JSONL log.
 import json
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
+from typing import Literal, get_args
+from urllib.parse import urlencode
+
+from phy.config import Paths
+
+Status = Literal["ok", "failed", "skipped", "aborted"]
+# Statuses of runs that end before their model call: the viewer shows only their error line.
+NO_CALL = ("skipped", "aborted")
+# `/runs?since=`: `7d`, `week`, `2026-10-19` or `2026-10-19T06:00:00+00:00`.
+SINCE = r"^(\d+d|week|\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:\d{2})?)?)$"
+
+
+def arxiv_ids(ids: str | None) -> list[str] | None:
+    """`ids=` as a list of arXiv ids; None when it names none."""
+    return [i for i in (ids or "").replace(" ", "").split(",") if i] or None
+
+
+def since_start(since: str, now: datetime) -> str:
+    """The start of a `since=` window, as an ISO timestamp comparable with `started_at`: `<n>d`
+    is the last n × 24 h, `week` is from Monday 00:00 UTC. Raises ValueError for a bad date."""
+    if since == "week":
+        monday = now.date() - timedelta(days=now.weekday())
+        return datetime(monday.year, monday.month, monday.day, tzinfo=UTC).isoformat()
+    if since.endswith("d"):
+        return (now - timedelta(days=int(since[:-1]))).isoformat(timespec="seconds")
+    start = datetime.fromisoformat(since)
+    if len(since) == len("2026-10-19"):
+        return since
+    return (start if start.tzinfo else start.replace(tzinfo=UTC)).astimezone(UTC).isoformat()
+
+
+def status_pills(others: dict[str, str], status: str | None) -> list[tuple[str, str, bool]]:
+    """The status pills as (label, href, on); each keeps the rest of the filter."""
+    return [
+        (label, "/runs?" + urlencode(others | ({"status": s} if s else {})), s == status)
+        for label, s in [("all", None)] + [(s, s) for s in get_args(Status)]
+    ]
 
 
 @dataclass(frozen=True)
@@ -40,7 +76,7 @@ def row(run: sqlite3.Row) -> RunRow:
     )
 
 
-def input_tokens(run: sqlite3.Row) -> int:
+def _input_tokens(run: sqlite3.Row) -> int:
     """All input tokens: `tokens_in` counts only the uncached ones."""
     return sum(run[k] or 0 for k in ["tokens_in", "cache_read_tokens", "cache_write_tokens"])
 
@@ -48,7 +84,7 @@ def input_tokens(run: sqlite3.Row) -> int:
 def _tokens(run: sqlite3.Row) -> str:
     if run["tokens_out"] is None:
         return ""
-    return f"{input_tokens(run):,} / {run['tokens_out']:,}"
+    return f"{_input_tokens(run):,} / {run['tokens_out']:,}"
 
 
 def _duration(started_at: str, ended_at: str | None) -> str:
@@ -96,26 +132,30 @@ class RunView:
     total_cost: str
     log_path: str | None
     calls: list[Call]
+    unreadable: int  # log lines that are not JSON, such as one cut off by a crash
     missing_log: bool
-    # skipped and aborted runs never call the model, so only their error line is shown
-    no_call: bool
+    no_call: bool  # the run made no model call, so only its error line is shown
 
 
-def view(home: Path, run: sqlite3.Row) -> RunView:
-    no_call = run["status"] in ("skipped", "aborted") or run["log_path"] is None
-    log = home / run["log_path"] if run["log_path"] else None
+def view(paths: Paths, run: sqlite3.Row) -> RunView:
+    no_call = run["status"] in NO_CALL or run["log_path"] is None
+    log = paths.home / run["log_path"] if run["log_path"] else None
     missing = not no_call and not log.is_file()
-    calls = (
-        []
-        if no_call or missing
-        else [_call(json.loads(line)) for line in log.open() if line.strip()]
-    )
+    calls, unreadable = [], 0
+    for line in [] if no_call or missing else log.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            calls.append(_call(json.loads(line)))
+        except json.JSONDecodeError:
+            unreadable += 1
     return RunView(
         row=row(run),
         error=run["error"],
         total_cost=f"${run['cost_usd'] or 0:.4f}",
         log_path=run["log_path"],
         calls=calls,
+        unreadable=unreadable,
         missing_log=missing,
         no_call=no_call,
     )
