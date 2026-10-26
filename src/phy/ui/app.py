@@ -16,10 +16,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from phy import db
-from phy.config import Paths
+from phy.config import Paths, load_config
 from phy.release import release_status
-from phy.ui import export, figures, review, runs
-from phy.ui.help import HELP, REVIEW_KEYS
+from phy.ui import export, figures, monitor, review, runs
+from phy.ui.help import HELP, MONITOR_KEYS, REVIEW_KEYS
 
 HERE = Path(__file__).parent
 ARXIV_ID = r"^\d{4}\.\d{4,5}$"
@@ -140,6 +140,28 @@ def create_app(paths: Paths, clock: Callable[[], float] = time.time) -> FastAPI:
             return chips(request, conn, flag["card_id"], flag["field_path"])
         finally:
             conn.close()
+
+    @app.get("/monitor", response_class=HTMLResponse)
+    def monitor_page(request: Request):
+        now = datetime.fromtimestamp(clock(), UTC)
+        config = load_config(paths)
+        conn = db.connect(paths.db)
+        try:
+            tiles = monitor.instruments(conn, config, now)
+            funnel = monitor.funnel(conn, now)
+        finally:
+            conn.close()
+        return page(
+            request,
+            "monitor.html",
+            page="monitor",
+            now=now,
+            tiles=tiles,
+            reds=[t for t in tiles if t.state == "red"],
+            funnel=funnel,
+            questions=monitor.QUESTIONS,
+            keys=MONITOR_KEYS,
+        )
 
     @app.get("/runs", response_class=HTMLResponse)
     def runs_page(

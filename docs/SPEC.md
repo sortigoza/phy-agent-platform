@@ -366,7 +366,7 @@ Shows one Card at a time: the verified Cards with no Review, plus an unreviewed 
 Shows the Instrument tiles and the weekly funnel, with the page conventions (top bar with a red count, section pills, hover help).
 - **Layout, top to bottom:** an action list, the funnel strip, then the tiles grouped under their question. The action list has one line per red tile: the Instrument, its value, its action from the table below and a link to the runs behind it; the name jumps to the tile. With nothing red it is one "All green" line.
 - **Tile:** the name, the value, a sparkline of the last 7 days (one bar per day, weekends grey; Golden tiles show the last 7 eval runs instead), a note on what the value covers, the red rule and a "runs →" link. A tile is green, red, or grey when there is nothing to compute yet; grey says why ("no Reviews yet", "no Golden eval run yet", "baseline forming"). "Every M0 Instrument tile populated" means every tile has left grey.
-- **Links:** "runs →" opens the run list, `/runs` filtered by query string (`stage`, `status`, `ids`, `since`). Golden tiles link to `/eval/<id>`, and the invented-numbers tile to the Card.
+- **Links:** "runs →" opens the run list, `/runs` filtered by query string (`stage`, `status`, `ids`, `since`). Golden tiles link to `/eval/<id>`, and the invented-numbers tile to the Card (its Markdown export).
 - **Windows:** the last 7 days, except Filter precision (14 days) and weekly spend (the ISO week from Monday 00:00 UTC, the window the guardrail enforces, shown with last week's total). Announcement days are Mon–Fri; arXiv holidays are ignored.
 - **Queries:** every tile is one SQL query over the §6 tables, with no extra columns. Screenings and Cards are dated by their `run_id`'s `runs.started_at`. The unsupported rate divides by the fields that carry a Support, counted with `json_tree(card_json)`. The mark's date is the day it last advanced, since it moves to the run's `responseDate`. `runs.status` is `ok`, `failed`, `skipped` (a Paper too long to Read) or `aborted` (the API account is blocked); `skipped` and `aborted` runs make no model call.
 
@@ -374,7 +374,7 @@ Shows the Instrument tiles and the weekly funnel, with the page conventions (top
 | --- | --- | --- | --- | --- |
 | Papers harvested per announcement day | Is it running? | paper_versions, state | 0 on the latest announcement day the last successful Watch covered | Open the Watch run log |
 | Days since the high-water mark advanced | Is it running? | state | > 2 announcement days | Check launchd and the last Watch run |
-| Stage failures | Is it running? | runs | any failure in 7 days with no later `ok` run of the same Stage and paper | Open the run viewer |
+| Stage failures | Is it running? | runs | any Stage and paper with a `failed` or `aborted` run in 7 days and no later `ok` run of the same Stage and paper (`skipped` runs are not failures; a Paper given up after 3 failed Reads counts once) | Open the run viewer |
 | Candidates per week | Is the funnel shaped right? | screenings | outside `alerts.candidates_range` (not judged until Filter has run for 7 days) | Tighten or loosen keywords |
 | Unsupported-field rate | Is it right? | cards | > 10% over 7 days | Inspect runs; revise the Read prompt or parser |
 | Grounding rate (Golden) | Is it right? | eval_runs | < 98% on the latest eval run | Revert the change |
@@ -383,13 +383,13 @@ Shows the Instrument tiles and the weekly funnel, with the page conventions (top
 | Filter precision | Is it useful? | reviews | yes or partly < 70% over 2 weeks (once ≥ 20 Reviews) | Add negative keywords or examples |
 | Median review time | Is the Card well designed? | reviews | > 5 min | Shorten or reorder the Card |
 | Cost per Carded paper | Is it affordable? | runs | median over papers (every run tied to the paper, retries included) > 2× the median of the 7 days from the first Card | Find which Stage grew |
-| Weekly spend vs guardrail | Is it affordable? | runs | ≥ 80% of `budget.weekly_usd` | Check the volume; raise the limit deliberately |
+| Weekly spend vs guardrail | Is it affordable? | runs | ≥ 90% of `budget.weekly_usd` | Check the volume; raise the limit deliberately |
 | Reader minutes per relevant paper | Is it affordable? | reviews | > `alerts.minutes_per_relevant` (8) over 7 days | Find which grew: review time (trim the Card) or the share of "no" (tighten the Filter) |
 | Minutes spent on "no" Cards | Is it affordable? | reviews | > `alerts.wasted_minutes` (40) over 7 days | Raise `filter.threshold` or add scope notes |
 
 **Time is a cost too.** The two Reader-time tiles count only Review time, the one Reader activity M0 records. Reader minutes per relevant paper is `sum(seconds_spent)` over the Reviews rated yes or partly. Its note carries the **time multiplier**: relevant papers × `roi.baseline_minutes` ÷ Reader minutes, where the baseline is what getting the same out of a paper costs without the platform (abstract, introduction, figures, conclusions), not a full read. It is a note, not a red rule, because no single action follows from it. Minutes spent on "no" Cards is what the Filter's imprecision costs in the Reader's own time.
 
-**Funnel:** harvested → Candidates → Screened in → Carded → verified → reviewed → relevant (yes or partly) → deep read, each step counting what happened in the last 7 days, with each step's % of the one before. Because these are activity counts, not a cohort, a step can exceed 100% (reviewing last week's Cards). A sudden narrowing between two steps points to the Stage to inspect.
+**Funnel:** harvested → Candidates → Screened in → Carded → verified → reviewed → relevant (yes or partly) → deep read, each step counting what happened in the last 7 days, with each step's % of the one before. Because these are activity counts, not a cohort, a step can exceed 100% (reviewing last week's Cards). A sudden narrowing between two steps points to the Stage to inspect. Next to Carded, the strip shows "skipped as too long: N", the Papers whose Read was `skipped` in the last 7 days, with no red rule.
 
 ### `/runs` and `/runs/<id>`
 

@@ -118,6 +118,72 @@ HELP |= {
     " (dearer); cost is from the prices in config.toml.",
 }
 
+# /monitor: `i_<key>` explains a tile, `f_<key>` a funnel step
+HELP |= {
+    "monitorwindow": "Tiles cover the last 7 days to now, except Filter precision (14 days),"
+    " weekly spend (the ISO week from Monday 00:00 UTC) and the Golden tiles (the latest eval"
+    " run).",
+    "redcount": "Instruments that need action now.",
+    "actions": "One line per red tile: its value, what to do, and the runs behind it. The name"
+    " jumps to the tile.",
+    "allgreen": "No Instrument is red. Grey tiles have nothing to compute yet.",
+    "funnel": "What happened at each step in the last 7 days, with each step's share of the one"
+    " before. These are activity counts, not one cohort, so a step can pass 100% (reviewing last"
+    " week's Cards). A sudden narrowing points at the Stage to inspect.",
+    "spark": "One bar per day for the last 7 days, today last. Grey bars are weekends, when"
+    " arXiv announces nothing.",
+    "eval_spark": "One bar per Golden eval run, the last 7, newest last.",
+    "grey": "Nothing to compute yet, so the tile is neither green nor red. M0 needs every tile"
+    " to have left grey.",
+    "redrule": "When the tile turns red.",
+    "runslink": "The runs behind this value, in the run list.",
+    "evallink": "The Golden eval run behind this value.",
+    "cardlink": "The Card with an invented number, as Markdown.",
+    "skipped_too_long": "Papers whose Read was skipped because the paper is too long to send,"
+    " in the last 7 days. No red rule: a few are expected.",
+    "i_harvested": "New paper versions arXiv announced on the latest announcement day (Mon–Fri)"
+    " the last successful Watch covered. Red at 0: Watch ran but got nothing.",
+    "i_hwm_days": "Announcement days since the high-water mark last moved forward. The mark"
+    " advances only when every set harvested cleanly. Red above 2.",
+    "i_failures": "Stages and papers whose run failed or was aborted in the last 7 days, with no"
+    " later ok run. Skipped runs don't count. Red at any.",
+    "i_candidates": "Papers that passed the keyword pre-filter (or skipped it) in the last 7 days"
+    " and were scored by the model. Red outside alerts.candidates_range, once Filter has run 7"
+    " days.",
+    "i_unsupported": "Share of Card fields Verify found unsupported, over the Cards Read in the"
+    " last 7 days. Red above alerts.unsupported_rate.",
+    "i_grounding": "Share of Evidence quotes found word for word on the latest Golden eval run."
+    " Red below 98%; below 95% the run can't be accepted.",
+    "i_invented": "Numbers that appear nowhere in the paper: on Cards of the last 7 days, and on"
+    " the latest Golden eval run, where any is a hard fail. Red at any.",
+    "i_golden_diff": "Material changes in the latest Dev eval run against its accepted baseline."
+    " Red while there are any and the run is not accepted.",
+    "i_precision": "Share of your Reviews in the last 14 days rated yes or partly: how often a"
+    " Screened-in paper was worth Carding. Red below 70%, judged from 20 Reviews.",
+    "i_review_time": "Median time per Review in the last 7 days, from page load to save. Red"
+    " above alerts.review_minutes.",
+    "i_cost_per_card": "Median over Carded papers of every run tied to the paper, retries"
+    " included, in the last 7 days. Red above 2× the same median over the first Card's week.",
+    "i_spend": "Spend this ISO week (from Monday 00:00 UTC) against budget.weekly_usd, the"
+    " window the guardrail enforces. At 100% Read selects nothing until Monday. Red at 90%.",
+    "i_minutes_per_relevant": "Review minutes in the last 7 days per paper rated yes or partly."
+    " The time multiplier is relevant papers × roi.baseline_minutes ÷ Review minutes: what the"
+    " platform saves over skimming each paper yourself. Red above alerts.minutes_per_relevant.",
+    "i_wasted_minutes": 'Review minutes in the last 7 days on Cards rated "no": what the'
+    " Filter's imprecision costs you. Red above alerts.wasted_minutes.",
+    "f_harvested": "New paper versions Watch harvested.",
+    "f_candidates": "Papers that passed (or skipped) the pre-filter and were scored.",
+    "f_screened_in": "Candidates whose best score reached filter.threshold.",
+    "f_carded": "Papers Read made a Card for.",
+    "f_verified": "Cards that passed Verify.",
+    "f_reviewed": "Reviews you saved.",
+    "f_relevant": "Reviews rated yes or partly.",
+    "f_deep_read": "Reviews marked for a deep read.",
+}
+
+# The `?` key list of `/monitor`
+MONITOR_KEYS = [("[ / ]", "secnav"), ("?", "keys")]
+
 # The `?` key list of `/review`: each key with the hover text of what it does.
 REVIEW_KEYS = [
     ("j / k", "fieldnav"),
