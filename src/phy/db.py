@@ -401,6 +401,34 @@ def write_screening(
         )
 
 
+def write_eval_run(
+    conn: sqlite3.Connection,
+    *,
+    run_id: str,
+    golden_version: int,
+    split: str,
+    prompt_versions_json: str,
+    model: str,
+    metrics_json: str,
+    per_paper_json: str,
+) -> None:
+    with conn:
+        conn.execute(
+            "INSERT INTO eval_runs (id, golden_version, split, prompt_versions_json, model,"
+            " metrics_json, per_paper_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                run_id,
+                golden_version,
+                split,
+                prompt_versions_json,
+                model,
+                metrics_json,
+                per_paper_json,
+                _now(),
+            ),
+        )
+
+
 def uncarded_screened_in(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     """Every Screened-in latest Paper version without a Card, as (arxiv_id, version, best_score)."""
     return conn.execute(

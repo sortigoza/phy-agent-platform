@@ -14,6 +14,7 @@ import shlex
 import shutil
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from pathlib import Path
 from typing import Literal, get_args
 
 import structlog
@@ -202,11 +203,7 @@ def check(paths: Paths) -> list[str]:
     problems = []
     for entry in load(paths).papers:
         name = f"{entry.arxiv_id}v{entry.version}"
-        candidates = (
-            paths.golden_source_file(entry.arxiv_id, entry.version, fmt)
-            for fmt in get_args(SourceFormat)
-        )
-        source = next((path for path in candidates if path.is_file()), None)
+        source = frozen_source(paths, entry)
         if source is None:
             problems.append(f"{name}: frozen source missing")
             continue
@@ -217,6 +214,15 @@ def check(paths: Paths) -> list[str]:
                 f" {entry.sha256[:12]}…"
             )
     return problems
+
+
+def frozen_source(paths: Paths, entry: Entry) -> Path | None:
+    """The entry's frozen source download, whichever format it is, or None if missing."""
+    candidates = (
+        paths.golden_source_file(entry.arxiv_id, entry.version, fmt)
+        for fmt in get_args(SourceFormat)
+    )
+    return next((path for path in candidates if path.is_file()), None)
 
 
 def commit_hint(paths: Paths, entry: Entry) -> str:
