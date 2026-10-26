@@ -1,7 +1,7 @@
 # /monitor
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 07, 10, 12, 15
 
 ## Goal

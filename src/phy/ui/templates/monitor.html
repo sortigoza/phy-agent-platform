@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Monitor{% endblock %}
+
+{% block subject %}<b>Monitoring</b> <span class="title" title="{{ help.monitorwindow }}">last 7 days to {{ now.strftime('%a %d %b %H:%M') }} UTC</span>{% endblock %}
+
+{% block badges %}<span class="badge {{ 'uns' if reds else 'allok' }}" data-red title="{{ help.redcount }}">{{ reds|length }} red</span>{% endblock %}
+
+{% block subbar %}
+<nav class="secnav" title="{{ help.secnav }}">
+  <a href="#sec-actions">Needs action</a><a href="#sec-strip">Funnel</a>
+  {%- for key, label in questions.items() %}<a href="#sec-{{ key }}">{{ label }}</a>{% endfor %}
+</nav>
+{% endblock %}
+
+{% macro link(t) -%}
+{% if t.link %}<a class="runs" href="{{ t.link }}" title="{{ help[t.link_kind ~ 'link'] }}">{{ {'eval': 'eval run', 'card': 'Card', 'runs': 'runs'}[t.link_kind] }} →</a>{% endif %}
+{%- endmacro %}
+
+{% macro spark(t) -%}
+{% if t.bars %}{% set top = t.bars|map(attribute='value')|max or 1 %}{% set w = 110 / t.bars|length %}
+<svg class="spark" width="110" height="26" role="img"><title>{{ help.eval_spark if t.key in ['grounding', 'golden_diff'] else help.spark }}</title>
+  {%- for b in t.bars %}{% set h = [1, b.value / top * 26]|max %}<rect x="{{ '%.1f'|format(loop.index0 * w + 1) }}" y="{{ '%.1f'|format(26 - h) }}" width="{{ '%.1f'|format(w - 2) }}" height="{{ '%.1f'|format(h) }}" class="{{ 'we' if b.weekend else t.state }}"/>{% endfor -%}
+</svg>{% endif %}
+{%- endmacro %}
+
+{% block body %}
+<main class="doc wide monitor">
+<section id="sec-actions">
+{% if reds %}
+  <h2 title="{{ help.actions }}">{{ reds|length }} need{{ 's' if reds|length == 1 }} action</h2>
+  <ul class="actions">
+  {% for t in reds %}<li data-tile="{{ t.key }}" title="{{ help['i_' ~ t.key] }}"><a href="#tile-{{ t.key }}"><b>{{ t.name }}</b></a> <span class="tv">{{ t.value }}</span> <span class="ado">→ {{ t.action }}</span> {{ link(t) }}</li>
+  {% endfor %}
+  </ul>
+{% else %}
+  <p class="allgreen" title="{{ help.allgreen }}">All green.</p>
+{% endif %}
+</section>
+
+<section id="sec-strip">
+  <h2 title="{{ help.funnel }}">Funnel <small>last 7 days, % of the step before</small></h2>
+  <div class="funnel">
+  {% for s in funnel.steps %}<div class="fstep" data-step="{{ s.key }}" title="{{ help['f_' ~ s.key] }}"><b>{{ s.count }}</b> <span>{{ s.label }}</span>{% if s.share is not none %} <small>{{ '%.0f'|format(s.share * 100) }}%</small>{% endif %}
+    {%- if s.key == 'carded' %} <small class="skipped" title="{{ help.skipped_too_long }}">skipped as too long: {{ funnel.skipped_too_long }}</small>{% endif %}</div>
+  {% endfor %}
+  </div>
+</section>
+
+{% for key, label in questions.items() %}
+<section id="sec-{{ key }}">
+  <h2>{{ label }}</h2>
+  <div class="tiles">
+  {% for t in tiles if t.question == key %}
+    <div class="tile {{ t.state }}" id="tile-{{ t.key }}" data-state="{{ t.state }}" title="{{ help['i_' ~ t.key] }}">
+      <div class="tt">{{ t.name }}</div>
+      <div class="tv">{{ t.value }}</div>
+      {{ spark(t) }}
+      <div class="tn">{% if t.why %}<span class="why" title="{{ help.grey }}">{{ t.why }}</span>{% if t.note %} · {% endif %}{% endif %}{{ t.note }}</div>
+      <div class="th">{% if t.rule %}<span title="{{ help.redrule }}">{{ t.rule }}</span> {% endif %}{{ link(t) }}</div>
+    </div>
+  {% endfor %}
+  </div>
+</section>
+{% endfor %}
+</main>
+{% endblock %}

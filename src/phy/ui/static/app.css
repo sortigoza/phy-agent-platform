@@ -120,3 +120,34 @@ table.runs .num { text-align: right; font-variant-numeric: tabular-nums; }
 .call pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; background: var(--soft); padding: 6px 10px; margin: 4px 0; max-height: 480px; overflow-y: auto; }
 .call details summary { font-size: 13px; color: var(--muted); cursor: pointer; }
 .call .role { font-size: 12px; color: var(--muted); }
+
+/* /monitor */
+.badge.allok { color: var(--ok); }
+.monitor section { scroll-margin-top: 110px; }
+.monitor h2 { margin-top: 20px; }
+.allgreen { color: var(--ok); font-weight: 600; margin: 12px 0 0; }
+.actions { list-style: none; margin: 0; padding: 0; border: 1px solid var(--uns-b); border-left-width: 6px; border-radius: 6px; background: var(--uns); }
+.actions li { padding: 5px 12px; border-bottom: 1px solid #f3cfcf; }
+.actions li:last-child { border-bottom: 0; }
+.actions a { text-decoration: none; }
+.actions .tv { color: var(--uns-b); font-weight: 600; margin: 0 6px; }
+.monitor .runs { font-size: 12px; color: var(--muted); text-decoration: underline; }
+.funnel { display: flex; gap: 2px; flex-wrap: wrap; }
+.fstep { flex: 1 1 100px; background: var(--soft); padding: 6px 8px; display: flex; flex-direction: column; }
+.fstep b { font-size: 20px; }
+.fstep span, .fstep small { font-size: 12px; color: var(--muted); }
+.fstep .skipped { color: var(--amber-ink); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--line); border-top: 4px solid var(--ok); border-radius: 6px; padding: 10px; scroll-margin-top: 110px; }
+.tile.red { border-top-color: var(--uns-b); background: var(--uns); }
+.tile.grey { border-top-color: var(--line); background: var(--soft); }
+.tile .tt, .tile .tn, .tile .th { font-size: 12px; color: var(--muted); }
+.tile .tt { font-size: 13px; }
+.tile .tv { font-size: 24px; font-weight: 600; }
+.tile.red .tv { color: var(--uns-b); }
+.tile.grey .tv { color: var(--muted); }
+.tile .why { font-style: italic; }
+.spark { display: block; margin: 4px 0; }
+.spark rect.green { fill: #9fcfb4; }
+.spark rect.red { fill: #e59a9a; }
+.spark rect.grey, .spark rect.we { fill: var(--line); }
