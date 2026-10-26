@@ -175,6 +175,7 @@ Edit `golden/manifest.yaml`. Any change bumps `version`.
 cp prompts/read/v2.md prompts/read/v3.md       # never edit a used version in place
 $EDITOR prompts/read/v3.md                     # address the Flags / red tile you saw
 uv run phy eval --prompt read=v3               # Golden set: grounding, invented numbers, filter, diff vs the accepted run
+# (--prompt filter=v2 overrides Filter too; exits non-zero on a hard fail: any invented number)
 # open the printed /eval/<id> link and review the Material changes
 # accept only if nothing regressed:
 #   set read.prompt_version = "v3" in config.toml

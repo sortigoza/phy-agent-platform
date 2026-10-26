@@ -194,8 +194,8 @@ The Card schema lives in `src/phy/card.py` as two Pydantic models. `CardDraft` i
 | `cards` | Card | Read, Verify | id, arxiv_id, version, card_json, status (draft, verified, reviewed, stale), unsupported_count, inferred_count, invented_numbers_json, warnings_json, model, prompt_version, schema_version, run_id |
 | `reviews` | Review | UI | card_id, relevance (yes, partly, no), deep_read, seconds_spent, note, created_at |
 | `flags` | Flag | UI | card_id, field_path, kind (wrong_value, quote_doesnt_support, missing, should_be_opinion), note, created_at |
-| `runs` | Stage execution (and each `phy golden add` Read, as stage `golden`) | every Stage, `phy golden add` | id, stage, arxiv_id, status, error, model, prompt_version, tokens_in (uncached), tokens_out, cache_read_tokens, cache_write_tokens, cost_usd, started_at, ended_at, log_path |
-| `eval_runs` | Golden eval run | `phy eval` | id, golden_version, split, prompt_versions_json, model, metrics_json, per_paper_json (each eval Card whole; eval Cards never go in `cards`), baseline_id, diff_json, material_changes, accepted_at, created_at |
+| `runs` | Stage execution (and each `phy golden add` Read, as stage `golden`; each `phy eval` and its calls, as stage `eval`) | every Stage, `phy golden add`, `phy eval` | id, stage, arxiv_id, status, error, model, prompt_version, tokens_in (uncached), tokens_out, cache_read_tokens, cache_write_tokens, cost_usd, started_at, ended_at, log_path |
+| `eval_runs` | Golden eval run | `phy eval` | id, golden_version, split, prompt_versions_json, model (the Read model), metrics_json, per_paper_json (each eval Card whole; eval Cards never go in `cards`), baseline_id, diff_json, material_changes, accepted_at, created_at |
 
 Card fields are stored only inside `card_json` and queried with SQLite JSON functions. There is no separate `card_fields` table.
 

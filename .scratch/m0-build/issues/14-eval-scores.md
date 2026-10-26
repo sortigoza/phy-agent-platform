@@ -1,7 +1,7 @@
 # phy eval scores
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 05, 09, 13, 22
 
 ## Goal

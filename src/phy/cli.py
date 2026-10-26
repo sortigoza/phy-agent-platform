@@ -12,6 +12,7 @@ import typer
 
 import phy
 from phy import daily as daily_stage
+from phy import eval as phy_eval
 from phy import filter as filter_stage
 from phy import flags as phy_flags
 from phy import golden as phy_golden
@@ -367,6 +368,41 @@ def golden_check() -> None:
     if problems:
         raise typer.Exit(1)
     typer.echo("every frozen source matches the manifest")
+
+
+def _prompt_versions(values: list[str]) -> dict[str, str]:
+    versions = {}
+    for value in values:
+        if not (m := re.fullmatch(r"(read|filter)=(\w+)", value)):
+            raise typer.BadParameter(f"{value!r} is not STAGE=VERSION with STAGE read or filter")
+        versions[m.group(1)] = m.group(2)
+    return versions
+
+
+@app.command("eval")
+def eval_(
+    prompt: Annotated[
+        list[str],
+        typer.Option(
+            "--prompt",
+            help="Override a Stage's prompt version, as read=v3 or filter=v2. Repeatable.",
+        ),
+    ] = [],  # noqa: B006 (typer needs a list default)
+    split: Annotated[phy_golden.Split, typer.Option("--split", help="M0 has only dev.")] = "dev",
+) -> None:
+    """Read, Verify and Filter the frozen Golden sources and store the Scores in eval_runs.
+    Exits non-zero on a hard fail."""
+    versions = _prompt_versions(prompt)
+    paths = resolve_paths()
+    with phy_lock(paths):
+        try:
+            evaluated = phy_eval.run(Ctx.load(paths), prompt_versions=versions, split=split)
+        except phy_eval.ERRORS as e:
+            log.error("eval.failed", error=str(e))
+            raise typer.Exit(1) from None
+    typer.echo(phy_eval.render(evaluated))
+    if evaluated.metrics["hard_fail"]:
+        raise typer.Exit(1)
 
 
 @schedule_app.command("install")
