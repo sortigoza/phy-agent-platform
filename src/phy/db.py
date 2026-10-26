@@ -5,6 +5,7 @@ transaction, tracked by `PRAGMA user_version`. A merged migration is never edite
 down-migrations.
 """
 
+import json
 import re
 import sqlite3
 from datetime import UTC, date, datetime
@@ -568,6 +569,31 @@ def unretried_failures(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         "   SELECT 1 FROM runs r WHERE r.stage = f.stage AND r.arxiv_id IS f.arxiv_id"
         "   AND r.status = 'ok' AND r.started_at > f.started_at)"
         " ORDER BY f.started_at, f.id"
+    ).fetchall()
+
+
+def list_runs(
+    conn: sqlite3.Connection,
+    *,
+    stage: str | None = None,
+    status: str | None = None,
+    arxiv_ids: list[str] | None = None,
+    since: str | None = None,
+) -> list[sqlite3.Row]:
+    """Runs for `/runs`, newest first; a filter left as None matches every run. `since` is an
+    ISO timestamp (or date) compared with `started_at`."""
+    return conn.execute(
+        "SELECT * FROM runs WHERE (:stage IS NULL OR stage = :stage)"
+        " AND (:status IS NULL OR status = :status)"
+        " AND (:ids IS NULL OR arxiv_id IN (SELECT value FROM json_each(:ids)))"
+        " AND (:since IS NULL OR started_at >= :since)"
+        " ORDER BY started_at DESC, id DESC",
+        {
+            "stage": stage,
+            "status": status,
+            "ids": None if arxiv_ids is None else json.dumps(arxiv_ids),
+            "since": since,
+        },
     ).fetchall()
 
 
