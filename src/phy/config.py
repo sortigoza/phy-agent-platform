@@ -113,6 +113,13 @@ class Paths:
         """A Golden Paper's frozen source download and `flattened.txt`, never re-fetched."""
         return self.golden_sources / f"{arxiv_id}v{version}"
 
+    def golden_source_file(self, arxiv_id: str, version: int, fmt: str) -> Path:
+        """The frozen download, named as in `papers/` (`source.tar.gz`, ...)."""
+        return self.golden_source(arxiv_id, version) / f"source.{fmt}"
+
+    def golden_flattened(self, arxiv_id: str, version: int) -> Path:
+        return self.golden_source(arxiv_id, version) / "flattened.txt"
+
     @property
     def runs(self) -> Path:
         return self.home / "runs"
