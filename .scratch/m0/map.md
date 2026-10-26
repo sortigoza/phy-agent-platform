@@ -39,13 +39,15 @@ Every M0 build decision is locked, and M0 (SPEC §3) is cut into ordered, vertic
 - [Per-Card cost: input-token cap, the too_long outcome and paper-text caching](issues/17-per-card-cost.md): no caching in Read (the prefix never repeated); `READ_MAX_TOKENS` is 8k; `read.max_input_tokens` is 150k (characters / 2, checked before the call), with a `skipped` runs row that selection excludes and that `phy status` lists; `--force` skips the cap; the Sonnet `cache_read` price is corrected to 0.10.
 - [Read failure bookkeeping, and what --force does to a reviewed Card](issues/18-read-failure-bookkeeping.md): `--force` refuses a Card with a Review or Flags; an insert failure marks the run `failed`; pre-call failures already get a row; Verify drops unknown question ids with a warning; errors that mean the account can't pay abort Read and Filter (an `aborted` run, one ERROR); after 3 failed Reads a Paper is excluded.
 - [Keep, wire up or drop the verify.normalize knob](issues/12-verify-normalize-knob.md): drop it; 48 of 1,618 real quotes fail (27 short equations, about 11 formatting, about 10 real misquotes), so `canonicalise` gains six specific rules and the minimum becomes 5 words or 30 characters (amending Quote format); re-verify every Card after the fix Release.
+- [Amend the M0 cut with the fix slices](issues/20-amend-m0-cut.md): five fix slices (18 quote rules, 19 selection and guardrail, 20 per-Card limits, 21 failure bookkeeping, 22 logging and schedule hygiene) ship as `v0.2.0` (19–20) and `v0.3.0` (18, 21–22) before 14–16; the spend tile goes red at 90%; eval accept refuses below 95% grounding; skips are a funnel count, not a tile; burn-in waits on the fixes.
 
 ## Not yet specified
 
-- **Filter calibration.** Filter screens in 37% of Candidates, and its scores cluster on the anchors (85 of 102 at exactly 0.90). Retune the prompt or `filter.threshold`? Revisit once Golden eval (build slices 13–14) and about two weeks of Reviews give a precision number. This may turn out to be M1 work.
+_(nothing)_
 
 ## Out of scope
 
+- Filter calibration (37% of Candidates screened in, and scores clustered on the anchors): tuning needs the precision data M0's burn-in produces, `/monitor`'s Filter precision tile and its action cover it as normal operation, and Read selection makes a loose Filter cost only Haiku pennies. Ruled out 2026-10-26.
 - A signed `Phy.app` bundle (or `SMAppService`) so the login item shows as Phy and privacy (TCC) grants scope to phy alone: M0 needs no TCC permission, so this goes with M1 notifications (post-mortem observation 1).
 
 M1 and M2 work: the model reviewer in Verify, the LLM accuracy judge, the Held-out split, the Batch API, macOS notifications, the missed-papers log, Synthesize, Digest, the Improver agent, Langfuse, and citation tracking.

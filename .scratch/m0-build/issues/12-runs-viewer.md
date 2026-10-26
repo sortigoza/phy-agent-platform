@@ -16,7 +16,8 @@ SPEC §9 `/runs` and `/runs/<id>`, §5 Tracer; [Monitoring page layout and the S
 
 - `/runs`: newest first, filtered by `stage`, `status`, `ids` (comma-separated arXiv ids) and `since`; columns Stage, Paper, status, model, prompt version, tokens, cost, duration; with the page conventions.
 - `/runs/<id>`: from the run's JSONL, the request (prompt version, model, the prompt with the paper text collapsed), response, parsed output, validation errors, tokens, cache hits and cost. A missing JSONL file says so instead of erroring.
-- Indexes `runs(started_at)` and `runs(stage, arxiv_id, started_at)` added in a migration.
+- `status` filters and badges cover `ok`, `failed`, `skipped` (too long, from 20) and `aborted` (account blocked, from 21); `skipped` and `aborted` rows have no model call, so their viewer shows the `error` line only.
+- Indexes `runs(started_at)` and `runs(stage, arxiv_id, started_at)` added in a migration, numbered with the next free number when built (see the README).
 
 ## Tests first
 

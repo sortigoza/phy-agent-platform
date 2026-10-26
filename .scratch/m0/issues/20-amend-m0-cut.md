@@ -1,8 +1,9 @@
 # Amend the M0 cut with the fix slices
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 12, 14, 16, 17, 18, 19
+Assignee: Saul
 
 ## Question
 
@@ -28,3 +29,23 @@ Given the answers to the tickets above, which build tickets have to be added to 
 - From [Restart the burn-in](14-restart-burn-in.md): a fix slice changes the shipped defaults, QUICK_START and SPEC §11 to $5 / 3 / 20 / 0.95. Build slice 14 counts eval spend against `budget.weekly_usd` but not eval Reads against `weekly_ceiling`. Build ticket 17's checklist is already updated. Nothing has to ship before 2026-11-02.
 
 The original cut: [Slice M0 into implementation tickets](08-slice-m0.md).
+
+## Resolution
+
+**Five fix slices (18–22) go into `.scratch/m0-build/`, shipped as two Releases before the instruments. The open slices are amended in place.** The build README's table gives the order and the milestones.
+
+1. **New build tickets,** each one test-first session, grouped by module:
+   - [18 Verify: quote rules from the first real Cards](../../m0-build/issues/18-verify-quote-rules.md)
+   - [19 Read selection and the predictive guardrail](../../m0-build/issues/19-selection-and-guardrail.md)
+   - [20 Per-Card limits: no caching, output and input caps](../../m0-build/issues/20-per-card-limits.md)
+   - [21 Read and Filter failure bookkeeping](../../m0-build/issues/21-failure-bookkeeping.md)
+   - [22 Logging and schedule hygiene](../../m0-build/issues/22-logging-and-schedule-hygiene.md)
+2. **Order and Releases:** 19 → 20 → **`v0.2.0`** (spend protection in code; the update needs no config change) → 18 → 21 → 22 → **`v0.3.0`** (delete `verify.normalize` from `$PHY_HOME`, then `phy schedule update`, then `phy verify --force`) → 14 → 15 → 16 → 17. Slice 12 can be built any time. The quote rules (18) land before 14–15, so the first accepted Golden baseline uses them. Burn-in (17) is now also blocked by 18–22, so "M0 done" includes the fixes. Nothing has to ship before 2026-11-02, because the config guard holds.
+3. **Open slices amended:**
+   - **12 `/runs`:** knows the `skipped` and `aborted` statuses; the migration takes the next free number.
+   - **14 eval:** migration `NNN_eval_runs` (`007` today, not `006`); eval spend counts against the budget, but eval Reads don't count against the ceiling; no caching; blocked by 22.
+   - **15 accept:** refuses below **95%** grounding, while the tile stays red below 98%. At 98%, about 1 accept in 5 would have been refused for chance misquotes, with no override.
+   - **16 `/monitor`:** the spend tile goes red at **≥ 90%** (the Reader's call; the plan sits at about 84% of $5); the funnel shows "skipped as too long: N" with no tile; Stage failures ignores `skipped` and counts `aborted` and Papers given up after 3 failures.
+   - **17 burn-in:** the `v0.2.0` and `v0.3.0` rollout steps.
+4. **Every M0 tile can still leave grey under the new caps.** Filter precision needs at least 20 Reviews in 2 weeks, against about 20 Cards a week. The Golden tiles need 14–15 and the checklist evals.
+5. **Migration rule** (README): take the next free number when building, and never fill `004`.

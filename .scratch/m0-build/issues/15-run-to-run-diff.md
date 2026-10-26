@@ -19,7 +19,7 @@ SPEC §10 The run-to-run diff / Accepting a run; [How the Golden run-to-run diff
 - Material: Support changed, set of parsed numbers changed (value plus significant figures), invented number appeared, a quote now fails, list item added or removed, `code_data` null↔present, a Filter decision crossed `filter.threshold` or `read.always_threshold`. Everything else is a rewording. Opinion changes go in their own section and never count; a deep-read flip is highlighted.
 - `diff_json`, `material_changes` and `baseline_id` stored; the CLI summary prints Scores vs baseline, Material changes and rewordings per Paper, and the `/eval/<id>` link.
 - `/eval/<id>`: page conventions; Material changes red, rewordings greyed and folded; old over new rendered with KaTeX, toggle to a word-level raw diff.
-- `phy eval accept <id>` sets `accepted_at`; refuses when prompt versions or model differ from the active config, or on a hard fail (invented number, grounding < 98%); no override; never edits config.
+- `phy eval accept <id>` sets `accepted_at`; refuses when prompt versions or model differ from the active config, or on a hard fail (invented number, grounding < 95%; the Grounding tile on `/monitor` still goes red below 98%, from [Amend the M0 cut](../../m0/issues/20-amend-m0-cut.md)); no override; never edits config.
 
 ## Tests first
 

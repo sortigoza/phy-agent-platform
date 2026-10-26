@@ -2,7 +2,7 @@
 
 Type: HITL
 Status: open
-Blocked by: 11, 16
+Blocked by: 11, 16, 18, 19, 20, 21, 22
 
 ## Goal
 
@@ -21,7 +21,8 @@ SPEC §3 M0 exit criteria; QUICK_START §2–5.
    - Smoke test (exit criterion 1; see the map ticket [Sign off the calls](../../m0/issues/19-sign-off-slice-calls.md)): `phy read --paper 1904.12072`, then `phy verify`, then review the Card in `/review`. `read.prompt_version` is `v2` (switched 2026-10-26).
    - When you choose, run `uv run phy schedule install`, then `phy schedule status`.
 3. **The clock.** Day 1 is the first *scheduled* run after the install that advances the mark. The `RunAtLoad` run counts only if it advances the mark. A day counts when Watch is `ok` and the mark advances. Filter, Read or Verify failures don't reset the count, but fix them: tag a new Release and run `phy schedule update`, which doesn't reset it either. A Watch failure or a missed day restarts the count at 0. Manual runs never count.
-   - When `phy schedule update` installs the fix Release that drops `verify.normalize` (map ticket [Keep, wire up or drop the verify.normalize knob](../../m0/issues/12-verify-normalize-knob.md)), delete that line from `$PHY_HOME/config.toml` at the same time, then run `phy verify --force` once.
+   - **`v0.2.0`** (after slices 19 and 20, from [Amend the M0 cut](../../m0/issues/20-amend-m0-cut.md)): tag it, then run `phy schedule update`. No config change is needed.
+   - **`v0.3.0`** (after slices 18, 21 and 22): tag it. Delete the `verify.normalize` line from `$PHY_HOME/config.toml`, then run `phy schedule update` and `phy verify --force` once. The order matters: `v0.2.0` still requires the key, and `v0.3.0` refuses it.
 4. Add the remaining seed Papers with `phy golden add` (2003.06413, 1606.02318, 1605.01735) and run `phy eval` then `phy eval accept <id>`.
 5. Review Cards in `/review` on weekdays, so the Review tiles fill.
 6. After slice 16 is released and installed: open `/monitor`.
