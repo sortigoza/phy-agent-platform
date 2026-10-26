@@ -14,6 +14,7 @@ import phy
 from phy import daily as daily_stage
 from phy import filter as filter_stage
 from phy import flags as phy_flags
+from phy import golden as phy_golden
 from phy import init as phy_init
 from phy import llm
 from phy import log as phy_log
@@ -39,6 +40,10 @@ schedule_app = typer.Typer(
     no_args_is_help=True, help="The launchd job that runs `phy daily` from the installed Release."
 )
 app.add_typer(schedule_app, name="schedule")
+golden_app = typer.Typer(
+    no_args_is_help=True, help="The Golden set: frozen sources and Reference cards."
+)
+app.add_typer(golden_app, name="golden")
 
 
 def _print_version(value: bool) -> None:
@@ -311,6 +316,57 @@ def schema_export(
     """Write the CardDraft and Card JSON Schemas (commit them, so schema changes show in diffs)."""
     for path in export_schemas(directory):
         typer.echo(str(path))
+
+
+@golden_app.command("add")
+def golden_add(
+    paper: Annotated[
+        str, typer.Argument(callback=_arxiv_id, help="arXiv id (no version); the latest is pinned.")
+    ],
+    split: Annotated[phy_golden.Split, typer.Option("--split", help="M0 has only dev.")] = "dev",
+    reason: Annotated[
+        phy_golden.Reason, typer.Option("--reason", help="Why the Paper is in the set.")
+    ] = "seed",
+    expect_in_scope: Annotated[
+        bool,
+        typer.Option(
+            "--expect-in-scope/--expect-out-of-scope", help="The expected Filter decision."
+        ),
+    ] = True,
+) -> None:
+    """Freeze a Paper's source into golden_sources/ and draft its Placeholder Reference card
+    (one Read call and Verify; `cards` is not touched). Bumps the manifest version."""
+    paths = resolve_paths()
+    with phy_lock(paths):
+        try:
+            added = phy_golden.add(
+                Ctx.load(paths), paper, split=split, reason=reason, expect_in_scope=expect_in_scope
+            )
+        except phy_golden.ERRORS as e:
+            log.error("golden.add_failed", error=str(e))
+            raise typer.Exit(1) from None
+    entry = added.entry
+    typer.echo(
+        f"added {paper}v{entry.version} ({entry.split} {entry.status}), Golden set version"
+        f" {added.manifest_version}, ${added.cost_usd:.4f}"
+    )
+    typer.echo(f"phy never commits; to commit:\n  {phy_golden.commit_hint(paths, entry)}")
+
+
+@golden_app.command("check")
+def golden_check() -> None:
+    """Check every frozen source against the sha256 the manifest pins."""
+    paths = resolve_paths()
+    try:
+        problems = phy_golden.check(paths)
+    except ConfigError as e:
+        log.error("golden.check_failed", error=str(e))
+        raise typer.Exit(1) from None
+    for problem in problems:
+        typer.echo(f"mismatch: {problem}")
+    if problems:
+        raise typer.Exit(1)
+    typer.echo("every frozen source matches the manifest")
 
 
 @schedule_app.command("install")

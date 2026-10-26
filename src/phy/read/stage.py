@@ -143,17 +143,14 @@ def _read(
         run_id=ctx.run_id, stage="read", arxiv_id=arxiv_id
     ):
         with Arxiv(ctx.paths, ctx.config.arxiv) as arxiv:
-            version = _latest_version(ctx, arxiv, arxiv_id)
+            version = latest_version(ctx, arxiv, arxiv_id)
             with structlog.contextvars.bound_contextvars(version=version):
                 existing = db.get_card(ctx.db, arxiv_id, version)
                 if existing is not None and not force and not dry_run:
                     log.info("read.skipped", reason="card_exists", card_id=existing["id"])
                     return AlreadyCarded(arxiv_id=arxiv_id, version=version, card_id=existing["id"])
-                data, fmt, fetched = _source(ctx, arxiv, arxiv_id, version)
-                text = _flatten(ctx, arxiv_id, version, data, fmt)
-                path = ctx.paths.flattened(arxiv_id, version)
-                path.write_text(text)
-                log.debug("read.flattened", chars=len(text), format=fmt, fetched=fetched)
+                _, text = prepare(ctx, arxiv, arxiv_id, version)
+        path = ctx.paths.flattened(arxiv_id, version)
         if dry_run:
             tokens = llm.count_tokens(config.model, text)
             return Prepared(
@@ -177,7 +174,8 @@ def _read(
     return Carded(arxiv_id=arxiv_id, version=version, card_id=card_id, cost_usd=cost)
 
 
-def _latest_version(ctx: Ctx, arxiv: Arxiv, arxiv_id: str) -> int:
+def latest_version(ctx: Ctx, arxiv: Arxiv, arxiv_id: str) -> int:
+    """The Paper's latest version, registering the Paper from `GetRecord` if it is new."""
     paper = db.get_paper(ctx.db, arxiv_id)
     if paper is None:
         record = arxiv.get_record(arxiv_id)
@@ -185,6 +183,16 @@ def _latest_version(ctx: Ctx, arxiv: Arxiv, arxiv_id: str) -> int:
         log.debug("read.paper_registered", versions=len(record.versions))
         return record.latest_version
     return paper["latest_version"]
+
+
+def prepare(ctx: Ctx, arxiv: Arxiv, arxiv_id: str, version: int) -> tuple[SourceFormat, str]:
+    """Fetch (or reuse) a Paper version's source and write its `flattened.txt`; the source
+    format and the flattened text."""
+    data, fmt, fetched = _source(ctx, arxiv, arxiv_id, version)
+    text = _flatten(ctx, arxiv_id, version, data, fmt)
+    ctx.paths.flattened(arxiv_id, version).write_text(text)
+    log.debug("read.flattened", chars=len(text), format=fmt, fetched=fetched)
+    return fmt, text
 
 
 def _source(

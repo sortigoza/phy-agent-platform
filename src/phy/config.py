@@ -50,6 +50,10 @@ class Paths:
     def golden_manifest(self) -> Path:
         return self.golden / "manifest.yaml"
 
+    def reference_card(self, arxiv_id: str) -> Path:
+        """A Golden Paper's Reference card, the Card eval Cards are scored against."""
+        return self.golden / arxiv_id / "reference.json"
+
     @property
     def changelog(self) -> Path:
         return self.home / "CHANGELOG.md"
@@ -104,6 +108,10 @@ class Paths:
     @property
     def golden_sources(self) -> Path:
         return self.home / "golden_sources"
+
+    def golden_source(self, arxiv_id: str, version: int) -> Path:
+        """A Golden Paper's frozen source download and `flattened.txt`, never re-fetched."""
+        return self.golden_sources / f"{arxiv_id}v{version}"
 
     @property
     def runs(self) -> Path:
@@ -276,7 +284,12 @@ def load_config(paths: Paths) -> Config:
 
 
 def load_questions(paths: Paths) -> Questions:
-    return _load(paths.questions_yaml, Questions, lambda text: yaml.safe_load(text) or {})
+    return load_yaml(paths.questions_yaml, Questions)
+
+
+def load_yaml[M: BaseModel](path: Path, model: type[M]) -> M:
+    """`path` validated as `model`; any problem is a ConfigError naming the file and key."""
+    return _load(path, model, lambda text: yaml.safe_load(text) or {})
 
 
 def _load[M: BaseModel](path: Path, model: type[M], parse) -> M:

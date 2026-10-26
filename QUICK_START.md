@@ -164,6 +164,10 @@ Edit `golden/manifest.yaml`. Any change bumps `version`.
 | `status` | `placeholder`, `trusted` | Only Trusted Papers produce accuracy scores |
 | `reason` | `seed`, `review_mistake`, `out_of_scope_probe`, `awkward_source` | Why the Paper is in the set |
 | `expect_in_scope` | `true`, `false` | Expected Filter decision |
+| `version`, `sha256` | pinned by `phy golden add` | The Paper version and the sha256 of its frozen source in `golden_sources/` |
+| `added_at`, `corrected_by`, `corrected_at` | dates, your name | Provenance; a Trusted entry needs `corrected_by` and `corrected_at` |
+
+`phy golden add <id>` takes `--reason` (default `seed`) and `--expect-out-of-scope`; M0 accepts only `--split dev` and at most 4 Dev Placeholders. Its Read call is traced as a `golden` run and counts against the budget, but writes no Card. `phy golden check` reports any frozen source whose sha256 no longer matches.
 
 ## 8. Meta-work: changing the system safely
 
@@ -186,7 +190,8 @@ Useful inputs for Meta-work:
 To promote a Placeholder to Trusted:
 1. Correct `golden/<id>/reference.json` field by field.
 2. Set `status: trusted`.
-3. Bump the manifest `version`.
+3. Set `corrected_by` and `corrected_at`.
+4. Bump the manifest `version`.
 
 ## 9. When something looks wrong
 
