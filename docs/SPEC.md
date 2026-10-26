@@ -125,7 +125,7 @@ A Paper that appears in several sets gets the most permissive pre-filter of thos
 
 **Scheduling.** A launchd agent runs `phy daily`, which executes Watch → Filter → Read → Verify in order.
 - Unattended runs execute a **Release**, never the dev clone, so half-finished code is never run at 06:00. A Release is an annotated tag `vMAJOR.MINOR.PATCH` on `main` that the Reader creates; phy never tags. The newest is `git tag --list 'v*' --sort=-v:refname`, ignoring pre-release tags. `phy schedule install` refuses when no Release exists; otherwise it checks the newest one out as a detached `git worktree` at `$PHY_HOME/app` (ignored by `$PHY_HOME/.gitignore`) and runs `uv sync` there.
-- When a newer Release exists, the top bar of every UI page shows an amber "update available" badge listing the commits, `phy status` prints one line, and `phy daily` logs one INFO `schedule.update_available` event. It is never a red tile. The check is local: the worktree shares the dev repo's tags. `phy schedule update` takes `phy.lock`, refuses a downgrade, checks out the newest Release in the worktree and runs `uv sync`; migrations apply on the next connect.
+- When a newer Release exists, the top bar of every UI page shows an amber "update available" badge listing the commits, `phy status` prints one line, and `phy daily` logs one INFO `schedule.update_available` event. It is never a red tile. The check is local: the worktree shares the dev repo's tags. `phy schedule update` takes `phy.lock`, refuses a downgrade, checks out the newest Release in the worktree and runs `uv sync`; migrations apply on the next connect. `phy schedule uninstall` unloads the job and removes the plist and the worktree.
 - `phy schedule install` writes the plist with `StartCalendarInterval` at 06:00 plus `RunAtLoad`, the absolute path to `uv` (launchd's PATH is bare and it never reads shell profiles), `WorkingDirectory` set to `$PHY_HOME/app`, `PHY_HOME` in `EnvironmentVariables` (never a secret), and `StandardErrorPath` at `$PHY_HOME/logs/launchd.err` for crashes before logging starts.
 - If the Mac was asleep at 06:00, the run starts on wake. Several missed slots collapse into one run.
 - If the Mac was shut down, the run happens at login.
@@ -189,7 +189,7 @@ The Card schema lives in `src/phy/card.py` as two Pydantic models. `CardDraft` i
 | --- | --- | --- | --- |
 | `papers` | Paper | Watch | arxiv_id (PK), latest_version, title, authors, abstract, categories, primary_category, license, sets, first_seen_at, updated_at |
 | `paper_versions` | Paper version | Watch, Read | arxiv_id, version, submitted_at (from arXivRaw), first_seen_datestamp (OAI datestamp of the harvest that first carried this version), source_type (latex, pdf; detected by Read on download), local_path, sha256, fetched_at |
-| `state` | key | Watch | `watch.hwm` (date), `watch.last_success_at` |
+| `state` | key | Watch, `phy daily` | `watch.hwm` (date), `watch.last_success_at`, `daily.last_run_at` (read by `phy schedule status`) |
 | `screenings` | Paper version | Filter | arxiv_id, version, prefilter (pass, fail, skipped), scores_json ({Q1..Q4: score, reason}), best_score, screened_in, model, prompt_version, run_id |
 | `cards` | Card | Read, Verify | id, arxiv_id, version, card_json, status (draft, verified, reviewed, stale), unsupported_count, inferred_count, invented_numbers_json, warnings_json, model, prompt_version, schema_version, run_id |
 | `reviews` | Review | UI | card_id, relevance (yes, partly, no), deep_read, seconds_spent, note, created_at |

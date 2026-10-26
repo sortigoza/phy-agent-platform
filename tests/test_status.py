@@ -5,9 +5,11 @@ import pytest
 from typer.testing import CliRunner
 
 from phy import db
+from phy import status as phy_status
 from phy.cli import app
 from phy.config import resolve_paths
 from phy.locks import phy_lock
+from phy.release import ReleaseStatus
 
 NOW = datetime.now(UTC)
 
@@ -141,3 +143,20 @@ def test_status_does_not_take_the_lock(seeded):
 
     assert result.exit_code == 0
     assert result.stdout.startswith("watch: mark")
+
+
+@pytest.mark.parametrize(
+    "release, line",
+    [
+        (
+            ReleaseStatus("v0.1.0", "v0.2.0", ["Fix Verify", "Add /review"]),
+            "release: v0.1.0; update available: v0.2.0 (2 commits), run `phy schedule update`",
+        ),
+        (ReleaseStatus("v0.2.0", "v0.2.0"), "release: v0.2.0 (newest)"),
+        # the newest tag does not contain the installed one: not an update
+        (ReleaseStatus("v0.2.0", "v0.1.0"), "release: v0.2.0 (newest)"),
+    ],
+)
+def test_status_names_the_installed_release_and_any_update(seeded, monkeypatch, release, line):
+    monkeypatch.setattr(phy_status, "release_status", lambda paths: release)
+    assert phy("status").stdout.splitlines()[-1] == line

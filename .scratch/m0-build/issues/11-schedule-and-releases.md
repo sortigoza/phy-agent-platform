@@ -1,7 +1,7 @@
 # Schedule and Releases
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 10
 
 ## Goal
