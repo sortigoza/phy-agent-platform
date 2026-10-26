@@ -1,7 +1,7 @@
 # /review: Reviews and Flags
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 06
 
 ## Goal

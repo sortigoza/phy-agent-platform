@@ -19,7 +19,19 @@ HELP = {
     " paper doesn't contain, so nothing backs this value. Treat it as unverified.",
     "secnav": "Jump to a section.",
     "secuns": "Unsupported fields in this section.",
-    "raw": "Show the raw LaTeX instead of the rendered math and text. Key: r",
+    "raw": "Show the raw LaTeX instead of the rendered math and text.",
+    "keys": "Show the keyboard shortcuts.",
+    "timer": "Time on this Card since the page loaded; the target is about 4 minutes (amber at"
+    " 4:00, red at 5:00). The server times it and saves it with your Review.",
+    "fieldnav": "Move to the next or previous field.",
+    # the verdict bar
+    "relevance": "Is this paper relevant to your research questions? Used to measure the"
+    " Filter's precision.",
+    "deep_read": "Mark the paper for a full read later. The agent's suggestion is shown alongside.",
+    "note": "An optional note on the whole Card, saved with your Review.",
+    "save": "Save your Review (relevance, deep read, note, time) and load the next Card.",
+    "saved": "Your last Review was saved.",
+    "export": "Download the Card, its Flags and its Review as Markdown.",
     # fields
     "numq": "This number is in the value but not in the field's own quotes. It may come from"
     " elsewhere in the paper.",
@@ -27,6 +39,14 @@ HELP = {
     "none": "The paper has none of these. Not the same as unsupported.",
     "flag": "Flag this field: say what is wrong with it. Flags improve the prompts; Cards are"
     " never hand-edited.",
+    # Flag kinds
+    "wrong_value": "The value misstates the paper.",
+    "quote_doesnt_support": "The quotes are real, but they do not back up the value.",
+    "missing": "Something important is left out of this field.",
+    "should_be_opinion": "This is the agent's judgement presented as the paper's claim.",
+    "flagdel": "Remove this Flag. Flags can be removed until the Review is saved.",
+    "flagkind": "In the Flag form, while the note is empty: pick the kind of Flag.",
+    "flagsave": "In the Flag form: save the Flag, or cancel it.",
     "quotes": "The exact passages from the paper (raw LaTeX, rendered) that back this value.",
     "loc": "Where Verify found the quote in the paper.",
     "also": "The same text appears this many more times in the paper, so the location shown may"
@@ -48,3 +68,18 @@ HELP = {
     " names.",
     "figure_label_not_figure": "The label is in the source, but not in a figure environment.",
 }
+
+# The `?` key list of `/review`: each key with the hover text of what it does.
+REVIEW_KEYS = [
+    ("j / k", "fieldnav"),
+    ("[ / ]", "secnav"),
+    ("o", "quotes"),
+    ("f", "flag"),
+    ("1–4", "flagkind"),
+    ("Enter / Esc", "flagsave"),
+    ("y / p / n", "relevance"),
+    ("d", "deep_read"),
+    ("s", "save"),
+    ("r", "raw"),
+    ("?", "keys"),
+]

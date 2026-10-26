@@ -15,6 +15,8 @@
   <span class="badge uns{{ ' zero' if not view.counts.unsupported }}" title="{{ help.unsupported }}">{{ view.counts.unsupported }} unsupported</span>
 {% endif %}{% endblock %}
 
+{% block live %}{% if view %}<div class="timer" id="timer" title="{{ help.timer }}">0:00</div>{% endif %}{% endblock %}
+
 {% block subbar %}{% if view %}
 <nav class="secnav" title="{{ help.secnav }}">
   {% for s in view.sections %}<a href="#sec-{{ loop.index0 }}"><span class="name">{{ s.name }}</span>
@@ -44,12 +46,40 @@
           {% for q in f.quotes %}{{ m.quote(q) }}{% endfor %}
         </details>
         {% endif %}
+        {% with flags=flags_by_path.get(f.path, []) %}{% include "_flag_chips.html" %}{% endwith %}
+        <form class="flagform" hidden hx-post="/flags" hx-target="previous .chips" hx-swap="outerHTML"
+              hx-on::after-request="if (event.detail.successful) { this.hidden = true; this.reset(); }">
+          <input type="hidden" name="card_id" value="{{ view.row.id }}">
+          <input type="hidden" name="field_path" value="{{ f.path }}">
+          {% for kind, label in flag_kinds.items() %}<label title="{{ help[kind] }}"><input type="radio" name="kind" value="{{ kind }}"{{ ' checked' if loop.first }}><kbd>{{ loop.index }}</kbd> {{ label }}</label>{% endfor %}
+          <input type="text" name="note" placeholder="note (optional), Enter saves, Esc cancels">
+        </form>
       </div>
-      <div class="fact"><button class="flagbtn" type="button" disabled title="{{ help.flag }}">⚑</button></div>
+      <div class="fact"><button class="flagbtn" type="button" title="{{ help.flag }}">⚑</button></div>
     </div>
     {% endfor %}
   </section>
   {% endfor %}
 {% endif %}
 </main>
+{% endblock %}
+
+{% block bottom %}
+<div class="bottombar">
+  {% if saved %}<span class="savedmsg" title="{{ help.saved }}">saved {{ saved.paper }}: {{ saved.relevance }}{{ ', deep read' if saved.deep_read }}, {{ saved.seconds // 60 }}:{{ '%02d' % (saved.seconds % 60) }} · <a href="/cards/{{ saved.card_id }}/export.md" title="{{ help.export }}">export</a></span>{% endif %}
+  {% if view %}
+  <form class="verdict" id="verdict" hx-post="/reviews" hx-target="#page" hx-select="#page" hx-swap="outerHTML">
+    <input type="hidden" name="card_id" value="{{ view.row.id }}">
+    <input type="hidden" name="rendered_at" value="{{ rendered_at }}">
+    <span class="grp" title="{{ help.relevance }}">Relevant?
+      {% for value, key in [('yes', 'y'), ('partly', 'p'), ('no', 'n')] %}<label><input type="radio" name="relevance" value="{{ value }}" required><kbd>{{ key }}</kbd> {{ value }}</label>{% endfor %}
+    </span>
+    <label class="grp" title="{{ help.deep_read }}"><input type="checkbox" name="deep_read" value="1"><kbd>d</kbd> deep read
+      <small>(agent: {{ 'yes' if view.card.opinion.deep_read.recommend else 'no' }})</small></label>
+    <input type="text" name="note" placeholder="note (optional)" title="{{ help.note }}">
+    <button type="submit" title="{{ help.save }}"><kbd>s</kbd> save</button>
+    <a class="export" href="/cards/{{ view.row.id }}/export.md" title="{{ help.export }}">Export to Markdown</a>
+  </form>
+  {% endif %}
+</div>
 {% endblock %}

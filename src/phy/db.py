@@ -410,20 +410,96 @@ def stale_cards(conn: sqlite3.Connection, *, relevant_only: bool) -> list[sqlite
     ).fetchall()
 
 
+# A Card with what `/review` shows beside it: its Paper's metadata and best score.
+REVIEW_CARD = (
+    "SELECT c.*, p.title, p.authors, p.latest_version, pv.source_type, s.best_score,"
+    " s.arxiv_id IS NULL AS unscreened FROM cards c JOIN papers p USING (arxiv_id)"
+    " JOIN paper_versions pv USING (arxiv_id, version)"
+    " LEFT JOIN screenings s ON s.arxiv_id = c.arxiv_id AND s.version = c.version"
+)
+
+
+def review_card(conn: sqlite3.Connection, card_id: int) -> sqlite3.Row | None:
+    """One Card as `review_queue` returns it, whatever its status."""
+    return conn.execute(REVIEW_CARD + " WHERE c.id = ?", (card_id,)).fetchone()
+
+
+def card_review(conn: sqlite3.Connection, card_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM reviews WHERE card_id = ?", (card_id,)).fetchone()
+
+
 def review_queue(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     """Cards awaiting a Review, next first, with their Paper's metadata and best score: verified
     or Stale Cards with no Review, except a Stale one whose Paper has a newer Card. Cards without
     a screening (`read --paper`) come first, then by `best_score` descending."""
     return conn.execute(
-        "SELECT c.*, p.title, p.authors, p.latest_version, pv.source_type, s.best_score,"
-        " s.arxiv_id IS NULL AS unscreened FROM cards c JOIN papers p USING (arxiv_id)"
-        " JOIN paper_versions pv USING (arxiv_id, version)"
-        " LEFT JOIN screenings s ON s.arxiv_id = c.arxiv_id AND s.version = c.version"
-        " WHERE c.status IN ('verified', 'stale')"
+        REVIEW_CARD + " WHERE c.status IN ('verified', 'stale')"
         " AND NOT EXISTS (SELECT 1 FROM reviews WHERE card_id = c.id)"
         " AND (c.status = 'verified' OR NOT EXISTS (SELECT 1 FROM cards n"
         "   WHERE n.arxiv_id = c.arxiv_id AND n.version > c.version))"
         " ORDER BY unscreened DESC, s.best_score DESC NULLS LAST, c.id"
+    ).fetchall()
+
+
+def write_review(
+    conn: sqlite3.Connection,
+    card_id: int,
+    relevance: Literal["yes", "partly", "no"],
+    deep_read: bool,
+    seconds_spent: int,
+    note: str | None,
+) -> bool:
+    """Store a Card's Review and make a verified Card `reviewed`; a Stale Card stays Stale, so
+    Read's selection can re-card it. A Card has at most one Review: returns False, writing
+    nothing, if it has one already."""
+    with conn:
+        if card_review(conn, card_id):
+            return False
+        conn.execute(
+            "INSERT INTO reviews (card_id, relevance, deep_read, seconds_spent, note, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (card_id, relevance, int(deep_read), seconds_spent, note, _now()),
+        )
+        conn.execute(
+            "UPDATE cards SET status = 'reviewed', updated_at = ?"
+            " WHERE id = ? AND status = 'verified'",
+            (_now(), card_id),
+        )
+    return True
+
+
+def add_flag(
+    conn: sqlite3.Connection, card_id: int, field_path: str, kind: str, note: str | None
+) -> int:
+    with conn:
+        row = conn.execute(
+            "INSERT INTO flags (card_id, field_path, kind, note, created_at)"
+            " VALUES (?, ?, ?, ?, ?) RETURNING id",
+            (card_id, field_path, kind, note, _now()),
+        ).fetchone()
+    return row["id"]
+
+
+def get_flag(conn: sqlite3.Connection, flag_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM flags WHERE id = ?", (flag_id,)).fetchone()
+
+
+def delete_flag(conn: sqlite3.Connection, flag_id: int) -> None:
+    with conn:
+        conn.execute("DELETE FROM flags WHERE id = ?", (flag_id,))
+
+
+def card_flags(conn: sqlite3.Connection, card_id: int) -> list[sqlite3.Row]:
+    """A Card's Flags, oldest first."""
+    return conn.execute("SELECT * FROM flags WHERE card_id = ? ORDER BY id", (card_id,)).fetchall()
+
+
+def flags_since(conn: sqlite3.Connection, since: str) -> list[sqlite3.Row]:
+    """The Flags created from `since` on, with their Card's Paper version, newest first."""
+    return conn.execute(
+        "SELECT f.*, c.arxiv_id, c.version FROM flags f JOIN cards c ON c.id = f.card_id"
+        " WHERE f.created_at >= ? ORDER BY f.created_at DESC, f.id DESC",
+        (since,),
     ).fetchall()
 
 

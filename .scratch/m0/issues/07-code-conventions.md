@@ -47,6 +47,6 @@ Grilled with the Reader on 2026-10-25. Recorded in SPEC §3 (Assumptions), §5 (
 - `$PHY_HOME/phy.lock` is non-blocking. It is taken by `daily` and every Stage command, including `read --paper`. If it is held, the command logs and exits 0. `ui` and `status` never take it.
 - `$PHY_HOME/arxiv.lock` is blocking. The process reads the last request time from the file, sleeps until `arxiv.min_interval_s` has passed, makes the request while holding the lock, writes the new time, then releases. Backoff sleeps also happen inside the lock.
 
-**Toolchain.** Python 3.13 (`.python-version`, `requires-python >=3.13`) with uv. `ruff` format and lint; no type checker in M0. Runtime dependencies: `anthropic, httpx, lxml, pydantic, pyyaml, typer, structlog, fastapi, uvicorn, jinja2, pypdfium2, pillow` (pillow added by build slice 06: pypdfium2 needs it to write PNGs). Dev: `pytest, respx, ruff`.
+**Toolchain.** Python 3.13 (`.python-version`, `requires-python >=3.13`) with uv. `ruff` format and lint; no type checker in M0. Runtime dependencies: `anthropic, httpx, lxml, pydantic, pyyaml, typer, structlog, fastapi, uvicorn, jinja2, pypdfium2, pillow, python-multipart` (pillow added by build slice 06: pypdfium2 needs it to write PNGs; python-multipart added by build slice 07: FastAPI needs it to read form posts). Dev: `pytest, respx, ruff`.
 
 **No ADR.** These are conventional and cheap to reverse. Nothing for GLOSSARY.md: they are implementation terms.

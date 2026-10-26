@@ -12,6 +12,7 @@ dependencies = [
     "pillow",
     "pydantic",
     "pypdfium2",
+    "python-multipart>=0.0.32",
     "pyyaml",
     "structlog",
     "typer",

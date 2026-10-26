@@ -9,10 +9,12 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <link rel="stylesheet" href="/static/app.css">
-<script>window.KATEX_MACROS = {{ macros|default({})|tojson }};</script>
 <script defer src="/static/app.js"></script>
 </head>
 <body>
+{# `#page` is what an HTMX write swaps when it loads a new page, such as the next Card. #}
+<div id="page">
+<script type="application/json" id="katex-macros">{{ macros|default({})|tojson }}</script>
 {# Page convention: one fixed top bar for /review, /monitor and /runs. #}
 <div class="stick">
 <header class="topbar">
@@ -26,10 +28,18 @@
     {% endif %}
     {% block badges %}{% endblock %}
   </div>
+  {% block live %}{% endblock %}
   <button class="rawbtn" type="button" title="{{ help.raw }}">raw</button>
+  <button class="keysbtn" type="button" title="{{ help.keys }}">?</button>
 </header>
 {% block subbar %}{% endblock %}
 </div>
 {% block body %}{% endblock %}
+{% block bottom %}{% endblock %}
+<div class="keys" id="keys" hidden>
+  <h3>Keys</h3>
+  <table>{% for key, name in keys|default([]) %}<tr><td><kbd>{{ key }}</kbd></td><td>{{ help[name] }}</td></tr>{% endfor %}</table>
+</div>
+</div>
 </body>
 </html>
