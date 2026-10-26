@@ -66,3 +66,5 @@ Further rules:
 - The field's shape and cap (≤ 3 suggested) go to [Card schema v1 and Read prompt v1](04-card-schema-and-read-prompt-prototype.md), the label check to [Code checks in Verify](06-verify-code-checks.md), and the display to [Review page design](05-review-page-prototype.md).
 
 **Spec changes made:** SPEC §7.3, §7.4, §8 and §9; GLOSSARY: Evidence refined, Key figure added.
+
+**Amended 2026-10-26** by [Keep, wire up or drop the verify.normalize knob](12-verify-normalize-knob.md): the minimum is now 5 words *or* 30 non-space canonical characters, and `canonicalise` gains six rules.
