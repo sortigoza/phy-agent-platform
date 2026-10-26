@@ -1,6 +1,8 @@
 """Releases and the launchd schedule, against a temporary git repo; launchctl and uv replaced."""
 
 import os
+import shutil
+import sqlite3
 import subprocess
 from pathlib import Path
 
@@ -76,8 +78,8 @@ def tag(repo, name, annotated=True):
 
 
 def test_the_newest_release_is_the_highest_annotated_semver_tag(repo):
-    assert release.newest(repo) is None
     commit(repo, "First")
+    assert release.newest(repo) is None
     tag(repo, "v0.1.0")
     commit(repo, "Second")
     tag(repo, "v0.2.0")
@@ -262,3 +264,47 @@ def test_phy_schedule_uninstall(cli, installed, launchd):
     result = cli("uninstall")
     assert result.exit_code == 0, result.output
     assert not launchd.loaded and not installed.app.exists()
+
+
+def test_a_tag_off_main_is_not_a_release(repo):
+    commit(repo, "First")
+    tag(repo, "v0.1.0")
+    git(repo, "checkout", "-q", "-b", "experiment")
+    commit(repo, "Experiment")
+    tag(repo, "v0.2.0")
+    git(repo, "checkout", "-q", "main")
+    assert release.newest(repo) == "v0.1.0"
+
+
+def test_the_installed_release_ignores_a_pre_release_tag_on_the_same_commit(repo, launchd):
+    commit(repo, "First")
+    tag(repo, "v0.1.0")
+    tag(repo, "v0.1.1-rc1")
+    schedule.install(resolve_paths(), repo)
+    assert release.installed(resolve_paths()) == "v0.1.0"
+
+
+def test_install_again_leaves_a_loaded_job_alone(repo, launchd):
+    commit(repo, "First")
+    tag(repo, "v0.1.0")
+    paths = resolve_paths()
+    schedule.install(paths, repo)
+    schedule.install(paths, repo)
+    assert [c[0] for c in launchd.calls if c[0] != "print"] == ["bootstrap"]
+
+
+def test_install_after_the_worktree_was_deleted_by_hand(repo, launchd):
+    commit(repo, "First")
+    tag(repo, "v0.1.0")
+    paths = resolve_paths()
+    schedule.install(paths, repo)
+    shutil.rmtree(paths.app)
+    assert schedule.install(paths, repo) == "v0.1.0"
+    assert paths.app.exists()
+
+
+def test_status_does_not_migrate_the_database(repo, installed, launchd):
+    """Run from the dev clone, it must not apply unreleased migrations to the Release's db."""
+    sqlite3.connect(installed.db).close()
+    assert schedule.status(installed).last_run_at is None
+    assert sqlite3.connect(installed.db).execute("PRAGMA user_version").fetchone() == (0,)

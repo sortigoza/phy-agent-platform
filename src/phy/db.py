@@ -63,6 +63,22 @@ def get_state(conn: sqlite3.Connection, key: str) -> str | None:
     return row["value"] if row else None
 
 
+def read_state(path: Path, key: str) -> str | None:
+    """One state value, read-only and without migrating: for a command that may run from code
+    newer than the Release that owns the database. None if the db or the table doesn't exist."""
+    try:
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    except sqlite3.OperationalError:
+        return None
+    try:
+        row = conn.execute("SELECT value FROM state WHERE key = ?", (key,)).fetchone()
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        conn.close()
+    return row[0] if row else None
+
+
 def set_state(conn: sqlite3.Connection, key: str, value: str) -> None:
     with conn:
         conn.execute(

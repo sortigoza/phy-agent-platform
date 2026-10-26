@@ -19,10 +19,9 @@ from phy.ctx import Ctx, new_run_id
 from phy.log import log_failure
 from phy.read import stage as read_stage
 from phy.release import release_status
+from phy.schedule import LAST_RUN
 
 log = structlog.get_logger()
-
-LAST_RUN = "daily.last_run_at"  # when the last `phy daily` finished, for `phy schedule status`
 
 STAGES = [
     ("watch", watch_stage.run, watch_stage.ERRORS),
