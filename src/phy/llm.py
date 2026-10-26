@@ -219,7 +219,7 @@ def _parse[M: BaseModel](
         try:
             output = output_format.model_validate_json(text)
         except ValidationError as e:
-            error = f"{call} returned output that fails its schema ({e.error_count()} errors)"
+            error = f"{call} returned output that fails its schema ({_schema_errors(e)})"
     ctx.tracer.record(run, request, response, error)
     log.debug(
         "llm.called",
@@ -230,6 +230,17 @@ def _parse[M: BaseModel](
     if error:
         raise ApiError(error)
     return output
+
+
+def _schema_errors(e: ValidationError, shown: int = 5) -> str:
+    """The count and the first few errors as `field.path: message`, without the input values,
+    which can hold paper text."""
+    items = [
+        ".".join(str(part) for part in err["loc"]) + ": " + err["msg"]
+        for err in e.errors(include_input=False, include_url=False)
+    ]
+    more = f"; and {len(items) - shown} more" if len(items) > shown else ""
+    return f"{e.error_count()} errors: " + "; ".join(items[:shown]) + more
 
 
 def cost(price: Price, usage: dict) -> float:
