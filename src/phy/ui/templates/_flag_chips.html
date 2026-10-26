@@ -1,0 +1,5 @@
+{# A field's Flags; the response to a Flag write, swapped in place of the old chips. #}
+<span class="chips">
+  {%- for fl in flags %}<span class="chip flagchip" title="{{ help[fl.kind] }}">⚑ {{ flag_kinds[fl.kind] }}{% if fl.note %}: {{ fl.note }}{% endif %}
+ <button class="flagdel" type="button" title="{{ help.flagdel }}" hx-delete="/flags/{{ fl.id }}" hx-target="closest .chips" hx-swap="outerHTML">×</button></span>{% endfor -%}
+</span>

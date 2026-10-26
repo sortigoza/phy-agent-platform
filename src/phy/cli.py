@@ -1,7 +1,7 @@
 """The `phy` command. Only parses arguments and calls plain functions."""
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -11,6 +11,7 @@ import typer
 import phy
 from phy import daily as daily_stage
 from phy import filter as filter_stage
+from phy import flags as phy_flags
 from phy import init as phy_init
 from phy import llm
 from phy import log as phy_log
@@ -254,6 +255,23 @@ def status() -> None:
         log.error("status.failed", error=str(e))
         raise typer.Exit(1) from None
     typer.echo(phy_status.render(report))
+
+
+def _days(value: str) -> timedelta:
+    if not (m := re.fullmatch(r"(\d+)d", value)):
+        raise typer.BadParameter(f"{value!r} is not a number of days like 30d")
+    return timedelta(days=int(m.group(1)))
+
+
+@app.command()
+def flags(
+    since: Annotated[
+        timedelta,
+        typer.Option("--since", parser=_days, help="How far back, in days (e.g. 30d)."),
+    ] = "30d",
+) -> None:
+    """Flags grouped by field and kind, as input for Meta-work."""
+    typer.echo(phy_flags.render(phy_flags.since(resolve_paths(), since), since))
 
 
 @app.command()

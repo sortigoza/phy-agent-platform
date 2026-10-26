@@ -73,5 +73,33 @@ details.ev summary { font-size: 12px; color: var(--muted); cursor: pointer; }
 .norender { padding: 24px; border: 1px dashed var(--muted); color: var(--muted); font-size: 13px; }
 .caption { font-size: 13px; color: var(--muted); }
 .flagbtn { border: 1px solid var(--line); background: var(--bg); border-radius: 4px; color: var(--muted); }
-.flagbtn:disabled { opacity: .5; }
 .empty { color: var(--muted); }
+
+/* clock, key list and bottom bar: shared by every page that has them */
+.timer { font: 600 16px ui-monospace, monospace; min-width: 52px; text-align: right; }
+.timer.warn { color: var(--amber-ink); }
+.timer.over { color: var(--uns-b); }
+.keysbtn { border: 1px solid var(--line); background: var(--bg); border-radius: 4px; color: var(--muted); font-size: 12px; }
+kbd { font: 11px ui-monospace, monospace; padding: 0 4px; border: 1px solid var(--line); border-radius: 3px; background: var(--soft); }
+.keys { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 30; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 16px 12px; box-shadow: 0 6px 24px rgba(0, 0, 0, .12); max-width: min(560px, calc(100vw - 32px)); }
+.keys[hidden] { display: none; }
+.keys h3 { margin: 4px 0 8px; font-size: 14px; }
+.keys td { padding: 2px 0; vertical-align: top; font-size: 13px; }
+.keys td:first-child { padding-right: 16px; white-space: nowrap; }
+.bottombar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; background: var(--bg); border-top: 1px solid var(--line); padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
+.savedmsg { color: var(--ok); font-size: 13px; }
+
+/* /review: verdict and Flags */
+.verdict { display: flex; flex: 1; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.verdict .grp label { margin-left: 6px; }
+.verdict input[type=text] { flex: 1 1 160px; padding: 3px 6px; }
+.verdict button { padding: 4px 12px; }
+.verdict .export { font-size: 13px; color: var(--muted); }
+[data-field].focus { outline: 2px solid var(--ink); outline-offset: -2px; }
+.chips { display: block; }
+.chips:empty { display: none; }
+.chip.flagchip { background: var(--amber-bg); color: var(--amber-ink); }
+.flagdel { border: 0; background: none; cursor: pointer; color: var(--amber-ink); padding: 0 2px; }
+.flagform { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin-top: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--soft); font-size: 13px; }
+.flagform[hidden] { display: none; }
+.flagform input[type=text] { flex: 1 1 200px; padding: 3px 6px; }

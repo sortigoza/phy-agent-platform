@@ -35,6 +35,13 @@ SECTION = {
     "questions": EQUATIONS,
     "opinion": OPINION,
 }
+# The kinds of Flag, as `flags.kind`, with their labels; the form's keys 1–4 follow this order.
+FLAG_KINDS = {
+    "wrong_value": "Wrong value",
+    "quote_doesnt_support": "Quote doesn't support it",
+    "missing": "Missing",
+    "should_be_opinion": "Should be opinion",
+}
 SETUP_FIELDS = [
     ("system", "System"),
     ("method", "Method"),
@@ -65,6 +72,7 @@ class Field:
     label: str
     kind: Literal["text", "fact", "none", "equation", "figure", "opinion"]
     value_html: str
+    text: str  # the value as the Card holds it, for the Markdown export
     support: str | None = None
     quotes: list[QuoteView] = field(default_factory=list)
     numbers: list[tuple[str, Literal["quote", "paper"]]] = field(default_factory=list)
@@ -136,12 +144,13 @@ def _fields(
 
     def fact(path: str, label: str, f: VerifiedFact | VerifiedLimitation | None) -> Field:
         if f is None:
-            return Field(path, label, "none", "<em>none</em>")
+            return Field(path, label, "none", "<em>none</em>", "none")
         return Field(
             path,
             label,
             "fact",
             tex_html(f.value),
+            f.value,
             support=f.support,
             quotes=[
                 QuoteView(q.quote, tex_html(q.quote), q.found, q.loc, max(q.match_count - 1, 0))
@@ -150,7 +159,9 @@ def _fields(
             numbers=numbers(path, f.ungrounded_numbers),
         )
 
-    fields = [Field("tldr", "tl;dr", "text", tex_html(card.tldr), numbers=numbers("tldr", []))]
+    fields = [
+        Field("tldr", "tl;dr", "text", tex_html(card.tldr), card.tldr, numbers=numbers("tldr", []))
+    ]
     fields += [
         fact(f"key_results[{i}]", f"Result {i + 1}", f) for i, f in enumerate(card.key_results)
     ]
@@ -169,6 +180,7 @@ def _fields(
                 f"Equation {e.label or i + 1}",
                 "equation",
                 tex_html(e.meaning),
+                e.meaning,
                 latex=e.latex,
             )
         )
@@ -181,12 +193,21 @@ def _fields(
                 f"Figure {kf.label}",
                 "figure",
                 tex_html(kf.why),
+                kf.why,
                 caption_html=tex_html(env.caption) if env else "",
                 files=[_figure_file(paths, row, name) for name in env.files] if env else [],
             )
         )
     questions = ", ".join(f"<b>{q.id}</b>: {tex_html(q.why)}" for q in card.questions)
-    fields.append(Field("questions", "Research questions", "text", questions or "<em>none</em>"))
+    fields.append(
+        Field(
+            "questions",
+            "Research questions",
+            "text",
+            questions or "<em>none</em>",
+            "; ".join(f"{q.id}: {q.why}" for q in card.questions) or "none",
+        )
+    )
     for i, lf in enumerate(card.opinion.limitations_flagged):
         fields.append(
             Field(
@@ -194,6 +215,7 @@ def _fields(
                 f"Flagged limitation {i + 1}",
                 "opinion",
                 tex_html(lf.value),
+                lf.value,
             )
         )
     deep_read = card.opinion.deep_read
@@ -204,6 +226,7 @@ def _fields(
             "Deep read?",
             "opinion",
             f"<b>{verdict}</b> — {tex_html(deep_read.why)}",
+            f"{verdict} — {deep_read.why}",
         )
     )
     return fields
