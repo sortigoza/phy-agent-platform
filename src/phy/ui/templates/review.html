@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Review{% if view %} · {{ view.row.arxiv_id }}v{{ view.row.version }}{% endif %}{% endblock %}
+
+{% block subject %}{% if view %}
+  <a href="https://arxiv.org/abs/{{ view.row.arxiv_id }}v{{ view.row.version }}" target="_blank">{{ view.row.arxiv_id }}v{{ view.row.version }}</a>
+  <span class="authors">{{ view.row.authors }}</span> · <span class="title">{{ view.row.title }}</span>
+{% endif %}{% endblock %}
+
+{% block badges %}{% if view %}
+  {% if view.stale_note %}<span class="badge stale" title="{{ view.stale_note }}. {{ help.stale }}">Stale</span>{% endif %}
+  {% if view.invented %}<span class="badge uns" title="{{ help.invented }}">{{ view.invented }} invented number{{ 's' if view.invented != 1 }}</span>{% endif %}
+  <span class="badge sup" title="{{ help.supported }}">{{ view.counts.supported }} supported</span>
+  <span class="badge inf" title="{{ help.inferred }}">{{ view.counts.inferred }} inferred</span>
+  <span class="badge uns{{ ' zero' if not view.counts.unsupported }}" title="{{ help.unsupported }}">{{ view.counts.unsupported }} unsupported</span>
+{% endif %}{% endblock %}
+
+{% block subbar %}{% if view %}
+<nav class="secnav" title="{{ help.secnav }}">
+  {% for s in view.sections %}<a href="#sec-{{ loop.index0 }}"><span class="name">{{ s.name }}</span>
+    {%- if s.unsupported %} <small class="secuns" title="{{ help.secuns }}">{{ s.unsupported }}</small>{% endif %}</a>{% endfor %}
+</nav>
+{% if view.stale_note %}<div class="stalebar" title="{{ help.stale }}">Stale: {{ view.stale_note }}. Rated yes or partly, it is re-Read.</div>{% endif %}
+{% endif %}{% endblock %}
+
+{% block body %}
+<main class="doc">
+{% if not view %}
+  <p class="empty">Nothing to review: every verified Card has a Review.</p>
+{% else %}
+  {% for s in view.sections %}
+  <section id="sec-{{ loop.index0 }}" data-section="{{ s.name }}"{% if loop.last %} class="opinion"{% endif %}>
+    <h2>{{ s.name }}{% if loop.last %} <small title="{{ help.opinion }}">the agent's judgement, not the paper's claims</small>{% endif %}</h2>
+    {% if s.warnings %}<div class="warnings">
+      {% for w in s.warnings %}<span class="chip warning" title="{{ help[w.kind] }}">{{ w.field }}: {{ w.detail }}</span>{% endfor %}
+    </div>{% endif %}
+    {% for f in s.fields %}
+    <div class="field{{ ' s-' ~ f.support if f.support in ('inferred', 'unsupported') }}" data-field="{{ f.path }}">
+      <div class="flabel"><span class="name">{{ f.label }}</span>{{ m.pills(f) }}</div>
+      <div class="fvalue">
+        {{ m.value(f, view) }}
+        {% if f.quotes %}
+        <details class="ev"><summary title="{{ help.quotes }}">{{ f.quotes|length }} quote{{ 's' if f.quotes|length != 1 }}{% if f.quotes|rejectattr('found')|list %} · not found{% endif %}</summary>
+          {% for q in f.quotes %}{{ m.quote(q) }}{% endfor %}
+        </details>
+        {% endif %}
+      </div>
+      <div class="fact"><button class="flagbtn" type="button" disabled title="{{ help.flag }}">⚑</button></div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+{% endif %}
+</main>
+{% endblock %}

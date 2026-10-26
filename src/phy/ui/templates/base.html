@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}phy{% endblock %}</title>
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/static/app.css">
+<script>window.KATEX_MACROS = {{ macros|default({})|tojson }};</script>
+<script defer src="/static/app.js"></script>
+</head>
+<body>
+{# Page convention: one fixed top bar for /review, /monitor and /runs. #}
+<div class="stick">
+<header class="topbar">
+  <nav class="pages" title="{{ help.nav }}"><b>phy</b>
+    {% for name in ['review', 'monitor', 'runs'] %}<a href="/{{ name }}"{% if page == name %} class="on"{% endif %}>{{ name }}</a>{% endfor %}
+  </nav>
+  <div class="subject">{% block subject %}{% endblock %}</div>
+  <div class="badges">
+    {% if release.newest and release.newest != release.installed %}
+    <span class="badge release" title="{{ help.release }} Commits: {{ release.commits|join('; ') }}">update available: {{ release.newest }} ({{ release.commits|length }} commit{{ 's' if release.commits|length != 1 }})</span>
+    {% endif %}
+    {% block badges %}{% endblock %}
+  </div>
+  <button class="rawbtn" type="button" title="{{ help.raw }}">raw</button>
+</header>
+{% block subbar %}{% endblock %}
+</div>
+{% block body %}{% endblock %}
+</body>
+</html>

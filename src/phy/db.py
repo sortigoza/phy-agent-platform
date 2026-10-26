@@ -410,6 +410,23 @@ def stale_cards(conn: sqlite3.Connection, *, relevant_only: bool) -> list[sqlite
     ).fetchall()
 
 
+def review_queue(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Cards awaiting a Review, next first, with their Paper's metadata and best score: verified
+    or Stale Cards with no Review, except a Stale one whose Paper has a newer Card. Cards without
+    a screening (`read --paper`) come first, then by `best_score` descending."""
+    return conn.execute(
+        "SELECT c.*, p.title, p.authors, p.latest_version, pv.source_type, s.best_score,"
+        " s.arxiv_id IS NULL AS unscreened FROM cards c JOIN papers p USING (arxiv_id)"
+        " JOIN paper_versions pv USING (arxiv_id, version)"
+        " LEFT JOIN screenings s ON s.arxiv_id = c.arxiv_id AND s.version = c.version"
+        " WHERE c.status IN ('verified', 'stale')"
+        " AND NOT EXISTS (SELECT 1 FROM reviews WHERE card_id = c.id)"
+        " AND (c.status = 'verified' OR NOT EXISTS (SELECT 1 FROM cards n"
+        "   WHERE n.arxiv_id = c.arxiv_id AND n.version > c.version))"
+        " ORDER BY unscreened DESC, s.best_score DESC NULLS LAST, c.id"
+    ).fetchall()
+
+
 def cards_read_since(conn: sqlite3.Connection, day: date) -> list[sqlite3.Row]:
     """Cards per UTC day of the Read run that wrote them, from `day` on, as (day, cards)."""
     return conn.execute(

@@ -93,6 +93,14 @@ class Paths:
         """The unpacked LaTeX tree."""
         return self.paper_dir(arxiv_id, version) / "src"
 
+    def figure_cache(self, arxiv_id: str, version: int) -> Path:
+        """PNGs the UI rendered from the source tree's PDF figures."""
+        return self.paper_dir(arxiv_id, version) / "figures"
+
+    def figure_png(self, arxiv_id: str, version: int, relative: str) -> Path:
+        """The cached PNG of the PDF figure at `relative` in the source tree."""
+        return self.figure_cache(arxiv_id, version) / Path(relative).with_suffix(".png")
+
     @property
     def golden_sources(self) -> Path:
         return self.home / "golden_sources"
