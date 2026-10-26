@@ -253,3 +253,14 @@ def test_check_reports_a_missing_frozen_source(installed, arxiv, messages_api):
     shutil.rmtree(installed / "golden_sources")
 
     assert golden.check(resolve_paths()) == ["1904.12072v3: frozen source missing"]
+
+
+def test_an_existing_card_for_the_paper_is_left_alone(installed, arxiv, messages_api):
+    assert phy("read", "--paper", "1904.12072").exit_code == 0
+    before = rows(installed, "SELECT * FROM cards")
+
+    result = phy("golden", "add", "1904.12072")
+
+    assert result.exit_code == 0, result.output
+    assert rows(installed, "SELECT * FROM cards") == before
+    assert messages_api.call_count == 2

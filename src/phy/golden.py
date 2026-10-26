@@ -10,10 +10,11 @@ not as a Card. `check()` compares every frozen source with its pinned sha256. ph
 """
 
 import hashlib
+import shlex
 import shutil
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from typing import Literal
+from typing import Literal, get_args
 
 import structlog
 import yaml
@@ -23,6 +24,7 @@ from phy import db, llm
 from phy.arxiv import Arxiv
 from phy.config import Paths, load_yaml
 from phy.ctx import Ctx
+from phy.read.source import SourceFormat
 from phy.read.stage import ERRORS as READ_ERRORS
 from phy.read.stage import latest_version, prepare
 from phy.tracer import Run
@@ -109,7 +111,6 @@ def add(
     split: Split = "dev",
     reason: Reason = "seed",
     expect_in_scope: bool = True,
-    today: date | None = None,
 ) -> Added:
     manifest = load(ctx.paths)
     _refuse(manifest, arxiv_id, split)
@@ -118,18 +119,18 @@ def add(
     ):
         started_at = datetime.now(UTC).isoformat(timespec="seconds")
         try:
-            entry = _add(ctx, arxiv_id, split, reason, expect_in_scope, today)
+            entry = _add(ctx, arxiv_id, split, reason, expect_in_scope)
         except Exception as e:
             # A failed model call has its row from the Tracer already.
             if db.get_run(ctx.db, ctx.run_id) is None:
                 db.record_run(ctx.db, ctx.run_id, "golden", "failed", started_at, str(e), arxiv_id)
             raise
-        added = Manifest(version=manifest.version + 1, papers=[*manifest.papers, entry])
-        save(ctx.paths, added)
-        log.info("golden.added", version=entry.version, manifest_version=added.version)
+        bumped = Manifest(version=manifest.version + 1, papers=[*manifest.papers, entry])
+        save(ctx.paths, bumped)
+        log.info("golden.added", version=entry.version, manifest_version=bumped.version)
     return Added(
         entry=entry,
-        manifest_version=added.version,
+        manifest_version=bumped.version,
         cost_usd=db.get_run(ctx.db, ctx.run_id)["cost_usd"],
     )
 
@@ -153,13 +154,12 @@ def _add(
     split: Split,
     reason: Reason,
     expect_in_scope: bool,
-    today: date | None,
 ) -> Entry:
     paths, config = ctx.paths, ctx.config.read
     with Arxiv(paths, ctx.config.arxiv) as arxiv:
         version = latest_version(ctx, arxiv, arxiv_id)
         with structlog.contextvars.bound_contextvars(version=version):
-            _, text = prepare(ctx, arxiv, arxiv_id, version)
+            fmt, text = prepare(ctx, arxiv, arxiv_id, version)
     row = db.get_paper_version(ctx.db, arxiv_id, version)
     run = Run(
         id=ctx.run_id,
@@ -172,24 +172,25 @@ def _add(
     draft = llm.read_card(ctx, run, text, authors)
     verified = verify_card(draft, Source(text, row["source_type"]))
 
+    # A frozen folder with no manifest entry is left by an add that failed after copying.
     frozen = paths.golden_source(arxiv_id, version)
     shutil.rmtree(frozen, ignore_errors=True)
     frozen.mkdir(parents=True)
-    download = paths.home / row["local_path"]
-    shutil.copyfile(download, frozen / download.name)
-    shutil.copyfile(paths.flattened(arxiv_id, version), frozen / "flattened.txt")
+    source = paths.golden_source_file(arxiv_id, version, fmt)
+    shutil.copyfile(paths.source_file(arxiv_id, version, fmt), source)
+    shutil.copyfile(paths.flattened(arxiv_id, version), paths.golden_flattened(arxiv_id, version))
     reference = paths.reference_card(arxiv_id)
     reference.parent.mkdir(parents=True, exist_ok=True)
     reference.write_text(verified.card.model_dump_json(indent=2) + "\n")
     return Entry(
         arxiv_id=arxiv_id,
         version=version,
-        sha256=hashlib.sha256((frozen / download.name).read_bytes()).hexdigest(),
+        sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
         split=split,
         status="placeholder",
         reason=reason,
         expect_in_scope=expect_in_scope,
-        added_at=today or datetime.now(UTC).date(),
+        added_at=datetime.now(UTC).date(),
         corrected_by=None,
         corrected_at=None,
     )
@@ -201,7 +202,11 @@ def check(paths: Paths) -> list[str]:
     problems = []
     for entry in load(paths).papers:
         name = f"{entry.arxiv_id}v{entry.version}"
-        source = next(paths.golden_source(entry.arxiv_id, entry.version).glob("source.*"), None)
+        candidates = (
+            paths.golden_source_file(entry.arxiv_id, entry.version, fmt)
+            for fmt in get_args(SourceFormat)
+        )
+        source = next((path for path in candidates if path.is_file()), None)
         if source is None:
             problems.append(f"{name}: frozen source missing")
             continue
@@ -218,7 +223,8 @@ def commit_hint(paths: Paths, entry: Entry) -> str:
     """The `git` command the Reader may run; phy never commits."""
     files = [paths.golden_manifest, paths.reference_card(entry.arxiv_id)]
     staged = " ".join(str(f.relative_to(paths.home)) for f in files)
+    home = shlex.quote(str(paths.home))
     return (
-        f"git -C {paths.home} add {staged} && git -C {paths.home} commit -m"
+        f"git -C {home} add {staged} && git -C {home} commit -m"
         f" 'Golden: add {entry.arxiv_id}v{entry.version} ({entry.split} {entry.status})'"
     )
