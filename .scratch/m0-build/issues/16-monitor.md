@@ -18,6 +18,11 @@ SPEC §9 `/monitor` (layout, tile, links, windows, queries, the Instrument table
 - Layout: action list (one line per red tile, or "All green"), funnel strip (eight steps, 7-day activity counts, % of previous), tiles grouped under their question with section pills; top bar with the red count.
 - 7-day sparklines, weekends grey; Golden tiles plot the last 7 eval runs.
 - The time multiplier in the Reader-minutes tile's note.
+- Changes from [Amend the M0 cut](../../m0/issues/20-amend-m0-cut.md):
+  - Weekly spend vs guardrail goes red at ≥ 90% of `budget.weekly_usd`, not 80%.
+  - The funnel strip shows "skipped as too long: N" (7 days) next to Carded, with no red rule.
+  - Stage failures ignores `skipped` runs, and counts `aborted` runs and Papers given up after 3 failures.
+  - SPEC §9's table is updated to match.
 - No new columns; any new index goes in a migration.
 
 ## Tests first
