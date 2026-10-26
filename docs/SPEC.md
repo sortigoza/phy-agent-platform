@@ -159,7 +159,7 @@ phy-agent-platform/             # the repo: code only
 ├── docs/SPEC.md  docs/adr/
 ├── prompts/<stage>/<version>.md  # immutable once used; config selects the active version
 ├── schemas/                    # exported Card JSON Schemas
-├── src/phy/                    # cli, config, db, arxiv, watch, filter, read/, verify, eval,
+├── src/phy/                    # cli, config, db, arxiv, watch, filter, read/, verify, golden, eval,
 │                               # card, questions, llm, tracer, locks, ui/, migrations/, defaults/
 └── tests/                      # pytest; fixtures/ replayed with respx, -m live for the paid smoke test
 

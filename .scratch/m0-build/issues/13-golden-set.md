@@ -1,7 +1,7 @@
 # Golden set
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 03
 
 ## Goal
