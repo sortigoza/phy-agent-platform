@@ -2,7 +2,8 @@
 
 The Release is a detached git worktree of the dev repo at `$PHY_HOME/app`, so work in progress
 in the clone never runs unattended. `launchctl` and `uv sync` each go through one function that
-tests replace.
+tests replace. The CLI holds `phy.lock` around install, update and uninstall, so none of them
+pulls the code from under a running `phy daily`.
 """
 
 import os
@@ -10,6 +11,7 @@ import plistlib
 import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,12 +20,13 @@ import structlog
 
 from phy import config, db, release
 from phy.config import Paths
-from phy.daily import LAST_RUN
 from phy.release import ReleaseError, git
 
 log = structlog.get_logger()
 
 LABEL = "phy.daily"
+LAST_RUN = "daily.last_run_at"  # when `phy daily` last finished, scheduled or not
+BOOTSTRAP_ATTEMPTS = 10  # `launchctl bootout` returns before the job is gone
 
 
 def launchctl(*args: str) -> subprocess.CompletedProcess[str]:
@@ -46,11 +49,16 @@ def find_uv() -> str:
 
 
 def agent_plist() -> Path:
+    """Outside `$PHY_HOME`: launchd only reads agents from here."""
     return Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
 
 
 def _domain() -> str:
     return f"gui/{os.getuid()}"
+
+
+def _service() -> str:
+    return f"{_domain()}/{LABEL}"
 
 
 def plist(paths: Paths, uv: str) -> bytes:
@@ -86,8 +94,9 @@ class Updated:
 
 def install(paths: Paths, repo: Path | None = None) -> str:
     """Check out the newest Release at `$PHY_HOME/app` (an existing checkout is left where it
-    is: `update` moves it), sync its environment, and (re)load the job. Returns the installed
-    Release. Running it again changes nothing."""
+    is: `update` moves it), sync its environment, and load the job. Returns the installed
+    Release. Running it again changes nothing: a loaded job with the same plist is not
+    reloaded, which would start another run (`RunAtLoad`)."""
     repo = repo or config.REPO
     if not paths.app.exists():
         tag = release.newest(repo)
@@ -95,21 +104,33 @@ def install(paths: Paths, repo: Path | None = None) -> str:
             raise ReleaseError(
                 "no Release to install: tag one on main first, e.g. git tag -a v0.1.0 -m ..."
             )
+        git(repo, "worktree", "prune")  # forget a checkout deleted by hand
         git(repo, "worktree", "add", "--detach", str(paths.app), tag)
     _ignore_app(paths)
     uv_sync(paths.app)
 
     paths.logs.mkdir(parents=True, exist_ok=True)
     agent = agent_plist()
-    agent.parent.mkdir(parents=True, exist_ok=True)
-    agent.write_bytes(plist(paths, find_uv()))
-    launchctl("bootout", f"{_domain()}/{LABEL}")  # fails when not loaded, which is fine
-    loaded = launchctl("bootstrap", _domain(), str(agent))
-    if loaded.returncode != 0:
-        raise ReleaseError(f"launchctl bootstrap {agent}: {loaded.stderr.strip()}")
+    wanted = plist(paths, find_uv())
+    loaded = launchctl("print", _service()).returncode == 0
+    if not (loaded and agent.exists() and agent.read_bytes() == wanted):
+        agent.parent.mkdir(parents=True, exist_ok=True)
+        agent.write_bytes(wanted)
+        if loaded:
+            launchctl("bootout", _service())
+        _bootstrap(agent)
     installed = release.installed(paths)
     log.info("schedule.installed", release=installed)
     return installed
+
+
+def _bootstrap(agent: Path) -> None:
+    for attempt in range(BOOTSTRAP_ATTEMPTS):
+        done = launchctl("bootstrap", _domain(), str(agent))
+        if done.returncode == 0:
+            return
+        time.sleep(0.5 * (attempt + 1))
+    raise ReleaseError(f"launchctl bootstrap {agent}: {done.stderr.strip()}")
 
 
 def _ignore_app(paths: Paths) -> None:
@@ -121,8 +142,8 @@ def _ignore_app(paths: Paths) -> None:
 
 
 def update(paths: Paths, repo: Path | None = None) -> Updated | None:
-    """Move `$PHY_HOME/app` to the newest Release and sync it; None when already there. The
-    caller holds `phy.lock`, so no run is mid-flight; migrations apply on the next connect."""
+    """Move `$PHY_HOME/app` to the newest Release and sync it; None when already there.
+    Migrations apply on the next connect."""
     previous = release.installed(paths)
     if previous is None:
         raise ReleaseError("no Release installed; run `phy schedule install` first")
@@ -139,30 +160,26 @@ def update(paths: Paths, repo: Path | None = None) -> Updated | None:
 
 
 def status(paths: Paths) -> ScheduleStatus:
-    printed = launchctl("print", f"{_domain()}/{LABEL}")
+    """Reads the db without migrating it: this may run from code newer than the Release."""
+    printed = launchctl("print", _service())
     loaded = printed.returncode == 0
-    exit_code = re.search(r"last exit code = (\S+)", printed.stdout) if loaded else None
-    last_run_at = None
-    if paths.db.exists():
-        conn = db.connect(paths.db)
-        try:
-            last_run_at = db.get_state(conn, LAST_RUN)
-        finally:
-            conn.close()
+    exit_code = re.search(r"last exit code = (\d+)", printed.stdout) if loaded else None
     return ScheduleStatus(
         loaded=loaded,
         installed=release.installed(paths),
-        last_run_at=last_run_at,
-        last_exit=exit_code.group(1) if exit_code and exit_code.group(1).isdigit() else None,
+        last_run_at=db.read_state(paths.db, LAST_RUN),
+        last_exit=exit_code.group(1) if exit_code else None,
     )
 
 
 def uninstall(paths: Paths, repo: Path | None = None) -> None:
     """Unload the job and remove the plist and the worktree. The data in `$PHY_HOME` stays."""
-    launchctl("bootout", f"{_domain()}/{LABEL}")
+    repo = repo or config.REPO
+    launchctl("bootout", _service())
     agent_plist().unlink(missing_ok=True)
     if paths.app.exists():
-        git(repo or config.REPO, "worktree", "remove", "--force", str(paths.app))
+        git(repo, "worktree", "remove", "--force", str(paths.app))
+    git(repo, "worktree", "prune")
     log.info("schedule.uninstalled")
 
 
@@ -173,11 +190,17 @@ def render(s: ScheduleStatus) -> str:
         else "job: not loaded; run `phy schedule install`"
     )
     if s.last_run_at:
-        last = (
-            f"last run: {datetime.fromisoformat(s.last_run_at).astimezone(UTC):%Y-%m-%d %H:%M} UTC"
-        )
+        last = f"{datetime.fromisoformat(s.last_run_at).astimezone(UTC):%Y-%m-%d %H:%M} UTC"
     else:
-        last = "last run: never"
+        last = "never"
     if s.last_exit is not None:
         last += f", launchd exit code {s.last_exit}"
-    return "\n".join([job, f"release: {s.installed or 'none installed'}", last])
+    return "\n".join([job, f"release: {s.installed or 'none installed'}", f"last run: {last}"])
+
+
+def render_update(updated: Updated | None, paths: Paths) -> str:
+    if updated is None:
+        return f"already on the newest Release, {release.installed(paths)}"
+    n = len(updated.commits)
+    head = f"updated {updated.previous} -> {updated.installed} ({n} commit{'s' * (n != 1)}):"
+    return "\n".join([head, *(f"  {subject}" for subject in updated.commits)])

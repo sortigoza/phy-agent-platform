@@ -10,8 +10,12 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import structlog
+
 from phy import config
 from phy.config import Paths
+
+log = structlog.get_logger()
 
 RELEASE = re.compile(r"v\d+\.\d+\.\d+")
 
@@ -48,26 +52,36 @@ def git(repo: Path, *args: str) -> str:
 
 
 def newest(repo: Path) -> str | None:
-    """The highest annotated `vX.Y.Z` tag; lightweight and pre-release tags are not Releases."""
+    """The highest annotated `vX.Y.Z` tag on `main`; lightweight and pre-release tags, and tags
+    on other branches, are not Releases."""
+    return next(iter(_releases(repo, "--merged", "main")), None)
+
+
+def installed(paths: Paths) -> str | None:
+    """The Release checked out at `$PHY_HOME/app`, or what `git describe` makes of HEAD when no
+    Release tag points at it (a tag deleted or moved since)."""
+    if not paths.app.exists():
+        return None
+    tags = _releases(paths.app, "--points-at", "HEAD")
+    return tags[0] if tags else git(paths.app, "describe", "--tags")
+
+
+def _releases(repo: Path, *selection: str) -> list[str]:
+    """Release tags among those `selection` picks, highest first."""
     listed = git(
         repo,
         "tag",
         "--list",
         "v*",
+        *selection,
         "--sort=-v:refname",
         "--format=%(objecttype) %(refname:strip=2)",
     )
-    for line in listed.splitlines():
-        kind, name = line.split(" ", 1)
-        if kind == "tag" and RELEASE.fullmatch(name):
-            return name
-    return None
-
-
-def installed(paths: Paths) -> str | None:
-    if not paths.app.exists():
-        return None
-    return git(paths.app, "describe", "--tags")
+    return [
+        name
+        for kind, name in (line.split(" ", 1) for line in listed.splitlines())
+        if kind == "tag" and RELEASE.fullmatch(name)
+    ]
 
 
 def pending(paths: Paths, tag: str) -> list[str]:
@@ -85,13 +99,16 @@ def pending(paths: Paths, tag: str) -> list[str]:
 
 
 def release_status(paths: Paths, repo: Path | None = None) -> ReleaseStatus:
-    """Never raises: a broken checkout shows as nothing installed rather than breaking a page."""
+    """Never raises: a broken checkout shows as nothing installed, logged, rather than breaking
+    a page."""
     try:
         now = installed(paths)
         latest = newest(repo or config.REPO)
         commits = pending(paths, latest) if now and latest else []
-    except Downgrade:
+    except Downgrade as e:
+        log.warning("release.downgrade_found", error=str(e))
         commits = []
-    except ReleaseError:
+    except ReleaseError as e:
+        log.warning("release.status_failed", error=str(e))
         return ReleaseStatus(installed=None, newest=None)
     return ReleaseStatus(installed=now, newest=latest, commits=commits)

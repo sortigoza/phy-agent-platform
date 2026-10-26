@@ -1,6 +1,8 @@
 """The `phy` command. Only parses arguments and calls plain functions."""
 
 import re
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Annotated
@@ -15,7 +17,6 @@ from phy import flags as phy_flags
 from phy import init as phy_init
 from phy import llm
 from phy import log as phy_log
-from phy import release as phy_release
 from phy import schedule as phy_schedule
 from phy import status as phy_status
 from phy import verify as verify_stage
@@ -315,22 +316,17 @@ def schema_export(
 @schedule_app.command("install")
 def schedule_install() -> None:
     """Check out the newest Release at $PHY_HOME/app and load the 06:00 launchd job."""
-    try:
-        tag = phy_schedule.install(resolve_paths())
-    except ReleaseError as e:
-        log.error("schedule.install_failed", error=str(e))
-        raise typer.Exit(1) from None
+    paths = resolve_paths()
+    with phy_lock(paths), _schedule_errors("install"):
+        tag = phy_schedule.install(paths)
     typer.echo(f"installed {tag}; {phy_schedule.LABEL} runs at 06:00 and at login")
 
 
 @schedule_app.command("status")
 def schedule_status() -> None:
     """Whether the job is loaded, the installed Release, and the last run."""
-    try:
+    with _schedule_errors("status"):
         s = phy_schedule.status(resolve_paths())
-    except ReleaseError as e:
-        log.error("schedule.status_failed", error=str(e))
-        raise typer.Exit(1) from None
     typer.echo(phy_schedule.render(s))
 
 
@@ -338,27 +334,24 @@ def schedule_status() -> None:
 def schedule_update() -> None:
     """Install the newest Release, once no run holds phy.lock. Refuses a downgrade."""
     paths = resolve_paths()
-    with phy_lock(paths):
-        try:
-            updated = phy_schedule.update(paths)
-        except ReleaseError as e:
-            log.error("schedule.update_failed", error=str(e))
-            raise typer.Exit(1) from None
-    if updated is None:
-        typer.echo(f"already on the newest Release, {phy_release.installed(paths)}")
-        return
-    n = len(updated.commits)
-    typer.echo(f"updated {updated.previous} -> {updated.installed} ({n} commit{'s' * (n != 1)}):")
-    for subject in updated.commits:
-        typer.echo(f"  {subject}")
+    with phy_lock(paths), _schedule_errors("update"):
+        updated = phy_schedule.update(paths)
+        typer.echo(phy_schedule.render_update(updated, paths))
 
 
 @schedule_app.command("uninstall")
 def schedule_uninstall() -> None:
     """Unload the job; remove its plist and $PHY_HOME/app. Data and config stay."""
-    try:
-        phy_schedule.uninstall(resolve_paths())
-    except ReleaseError as e:
-        log.error("schedule.uninstall_failed", error=str(e))
-        raise typer.Exit(1) from None
+    paths = resolve_paths()
+    with phy_lock(paths), _schedule_errors("uninstall"):
+        phy_schedule.uninstall(paths)
     typer.echo("uninstalled")
+
+
+@contextmanager
+def _schedule_errors(command: str) -> Iterator[None]:
+    try:
+        yield
+    except ReleaseError as e:
+        log.error(f"schedule.{command}_failed", error=str(e))
+        raise typer.Exit(1) from None
