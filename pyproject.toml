@@ -9,6 +9,7 @@ dependencies = [
     "httpx",
     "jinja2",
     "lxml",
+    "pillow",
     "pydantic",
     "pypdfium2",
     "pyyaml",

@@ -173,7 +173,7 @@ $PHY_HOME/                      # ~/.phy-agent-platform by default; a local git 
 ├── .gitignore                  # ignores everything below this line (arXiv ToU)
 ├── phy.db  phy.lock  arxiv.lock
 ├── app/                        # the installed Release: a detached git worktree of the repo
-├── papers/<arxiv_id>v<n>/      # raw download + flattened.txt
+├── papers/<arxiv_id>v<n>/      # raw download + flattened.txt (+ figures/: PDF figures as PNG)
 ├── golden_sources/<arxiv_id>v<n>/  # frozen, never re-fetched
 ├── runs/<run_id>.jsonl
 └── logs/
@@ -349,7 +349,7 @@ Caps: `key_results` 1–5, `assumptions` ≤ 4, `limitations_stated` ≤ 4, `key
 
 ### `/review`
 
-Shows one Card at a time, ordered by `best_score`.
+Shows one Card at a time: the verified Cards with no Review, plus an unreviewed Stale Card whose Paper has no newer Card, ordered by `best_score` descending, with Cards that have no screening (`read --paper`) first.
 - **Layout:** one column in Card order: the tl;dr, results and assumptions come first, then setup, limitations, equations and figures, and the Agent's opinion as one dashed block. Each field is a row: the label with its support and number pills, the value, and a Flag button. Inferred fields are shaded blue and unsupported fields red. Evidence quotes are folded under each value and show the derived `loc`, plus "also appears N× elsewhere" when `match_count` > 1. A row of section pills under the top bar jumps between sections. Relevance, deep read and save sit in a bar fixed to the bottom. Quotes are raw LaTeX: math renders with KaTeX auto-render, fed the paper's preamble `\newcommand`s, and text markup is cleaned up server-side for display only. Key figures are shown from the source tarball: PNG and JPG as they are, PDF figures rendered to PNG with pypdfium2, and EPS as "figure not renderable". Stale and invented-number badges are shown.
 - **Controls:** relevance (yes, partly, no), a Flag control on each field (a kind plus an optional note), and deep read (yes or no).
 - **Keys:** `j`/`k` field, `[`/`]` section, `o` quotes, `f` Flag (then `1`–`4` for the kind, a note, Enter), `y`/`p`/`n` relevance, `d` deep read, `s` save, `r` raw LaTeX, `?` the key list.

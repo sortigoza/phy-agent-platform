@@ -18,7 +18,7 @@ from phy import status as phy_status
 from phy import verify as verify_stage
 from phy import watch as watch_stage
 from phy.card import export_schemas
-from phy.config import SCHEMAS, ConfigError, resolve_paths
+from phy.config import SCHEMAS, ConfigError, load_config, resolve_paths
 from phy.ctx import Ctx
 from phy.locks import phy_lock
 from phy.read import stage as read_stage
@@ -254,6 +254,23 @@ def status() -> None:
         log.error("status.failed", error=str(e))
         raise typer.Exit(1) from None
     typer.echo(phy_status.render(report))
+
+
+@app.command()
+def ui() -> None:
+    """Serve the review UI on 127.0.0.1 (`ui.port`). Never takes phy.lock."""
+    import uvicorn
+
+    from phy.ui.app import create_app
+
+    paths = resolve_paths()
+    try:
+        port = load_config(paths).ui.port
+        web = create_app(paths)
+    except ConfigError as e:
+        log.error("ui.failed", error=str(e))
+        raise typer.Exit(1) from None
+    uvicorn.run(web, host="127.0.0.1", port=port)
 
 
 @schema_app.command("export")

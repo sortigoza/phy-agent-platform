@@ -1,0 +1,36 @@
+{% macro pills(f) %}<span class="tags">
+  {%- if f.support == 'inferred' %}<span class="tag inf" title="{{ help.inferred }}">inferred</span>
+  {%- elif f.support == 'unsupported' %}<span class="tag uns" title="{{ help.unsupported }}">unsupported</span>{% endif %}
+  {%- for n, where in f.numbers %}<span class="tag {{ 'numq' if where == 'quote' else 'nump' }}" title="{{ help.numq if where == 'quote' else help.nump }}">{{ n }} {{ '∉ quote' if where == 'quote' else '∉ paper' }}</span>{% endfor -%}
+</span>{% endmacro %}
+
+{% macro quote(q) %}
+<blockquote class="quote{{ ' notfound' if not q.found }}">
+  <span class="rendered">{{ q.html|safe }}</span><code class="raw">{{ q.raw }}</code>
+  <footer>
+    {%- if q.found %}<span title="{{ help.loc }}">{{ q.loc }}</span>{% if q.also %} · <span class="also" title="{{ help.also }}">also appears {{ q.also }}× elsewhere</span>{% endif %}
+    {%- else %}<span class="nf" title="{{ help.notfound }}">not found in the paper</span>{% if q.loc %} · <span title="{{ help.loc }}">{{ q.loc }}</span>{% endif %}{% endif -%}
+  </footer>
+</blockquote>
+{% endmacro %}
+
+{% macro value(f, view) %}
+  {% if f.kind == 'equation' %}
+  <div class="eq"><span class="rendered">$${{ f.latex }}$$</span><code class="raw">{{ f.latex }}</code></div>
+  <div class="meaning">{{ f.value_html|safe }}</div>
+  {% elif f.kind == 'figure' %}
+  <div class="meaning">{{ f.value_html|safe }}</div>
+  <div class="figs">
+    {% for file in f.files %}
+      {% if file.state == 'ok' %}<img loading="lazy" src="/figure/{{ view.row.arxiv_id }}/{{ view.row.version }}/{{ file.name }}" alt="{{ file.name }}">
+      {% elif file.state == 'not_renderable' %}<div class="norender" title="{{ help.norender }}">{{ file.name }}: figure not renderable</div>
+      {% else %}<div class="norender" title="{{ help.nofile }}">{{ file.name }}: file not found</div>{% endif %}
+    {% endfor %}
+  </div>
+  {% if f.caption_html %}<details class="caption"><summary title="{{ help.caption }}">caption</summary><span class="rendered">{{ f.caption_html|safe }}</span></details>{% endif %}
+  {% elif f.kind == 'none' %}
+  <span title="{{ help.none }}">{{ f.value_html|safe }}</span>
+  {% else %}
+  <span class="rendered">{{ f.value_html|safe }}</span>
+  {% endif %}
+{% endmacro %}

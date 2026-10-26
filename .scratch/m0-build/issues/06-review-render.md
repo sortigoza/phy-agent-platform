@@ -1,7 +1,7 @@
 # /review: render a Card
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 05
 
 ## Goal
