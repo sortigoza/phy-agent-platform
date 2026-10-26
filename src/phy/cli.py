@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, get_args
 
 import structlog
 import typer
@@ -370,11 +370,14 @@ def golden_check() -> None:
     typer.echo("every frozen source matches the manifest")
 
 
-def _prompt_versions(values: list[str]) -> dict[str, str]:
+def _prompt_versions(values: list[str]) -> dict[phy_eval.PromptStage, str]:
     versions = {}
     for value in values:
-        if not (m := re.fullmatch(r"(read|filter)=(\w+)", value)):
-            raise typer.BadParameter(f"{value!r} is not STAGE=VERSION with STAGE read or filter")
+        stages = get_args(phy_eval.PromptStage)
+        if not (m := re.fullmatch(rf"({'|'.join(stages)})=(\w+)", value)):
+            raise typer.BadParameter(
+                f"{value!r} is not STAGE=VERSION with STAGE one of {', '.join(stages)}"
+            )
         versions[m.group(1)] = m.group(2)
     return versions
 
@@ -401,7 +404,7 @@ def eval_(
             log.error("eval.failed", error=str(e))
             raise typer.Exit(1) from None
     typer.echo(phy_eval.render(evaluated))
-    if evaluated.metrics["hard_fail"]:
+    if evaluated.metrics["invented_numbers"]:
         raise typer.Exit(1)
 
 

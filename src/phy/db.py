@@ -412,6 +412,7 @@ def write_eval_run(
     metrics_json: str,
     per_paper_json: str,
 ) -> None:
+    """Store an eval run's Scores; the baseline and diff columns stay null."""
     with conn:
         conn.execute(
             "INSERT INTO eval_runs (id, golden_version, split, prompt_versions_json, model,"
