@@ -9,12 +9,14 @@ from collections import Counter
 from datetime import UTC, datetime, timedelta
 
 from phy import db
-from phy.config import Paths
+from phy.config import Paths, load_config
 
 INDEX = re.compile(r"\[\d+\]")
 
 
 def since(paths: Paths, window: timedelta, now: datetime | None = None) -> list[sqlite3.Row]:
+    """Raises ConfigError for invalid config, as every command does."""
+    load_config(paths)
     start = (now or datetime.now(UTC)) - window
     conn = db.connect(paths.db)
     try:

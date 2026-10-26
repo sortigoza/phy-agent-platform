@@ -2,6 +2,7 @@
 the Paper files; never takes `phy.lock`.
 """
 
+import sqlite3
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -81,7 +82,7 @@ def create_app(paths: Paths, clock: Callable[[], float] = time.time) -> FastAPI:
         seconds = max(round(clock() - rendered_at), 0)
         conn = db.connect(paths.db)
         try:
-            card = db.review_card(conn, card_id)
+            card = db.card_for_review(conn, card_id)
             if card is None:
                 raise HTTPException(404, f"no card {card_id}")
             if not db.write_review(conn, card_id, relevance, deep_read, seconds, note or None):
@@ -97,15 +98,17 @@ def create_app(paths: Paths, clock: Callable[[], float] = time.time) -> FastAPI:
         }
         return next_card(request, saved)
 
-    def chips(request: Request, conn, card_id: int, field_path: str) -> HTMLResponse:
+    def chips(
+        request: Request, conn: sqlite3.Connection, card_id: int, field_path: str
+    ) -> HTMLResponse:
         flags = [f for f in db.card_flags(conn, card_id) if f["field_path"] == field_path]
         return templates.TemplateResponse(request, "_flag_chips.html", {"flags": flags})
 
-    def open_card(conn, card_id: int) -> None:
+    def open_card(conn: sqlite3.Connection, card_id: int) -> None:
         """Raise unless the Card exists and has no Review, so its Flags can still change."""
-        if db.review_card(conn, card_id) is None:
+        if db.card_for_review(conn, card_id) is None:
             raise HTTPException(404, f"no card {card_id}")
-        if db.card_review(conn, card_id):
+        if db.get_review(conn, card_id):
             raise HTTPException(409, f"card {card_id} has a Review; its Flags are final")
 
     @app.post("/flags", response_class=HTMLResponse)
@@ -142,11 +145,11 @@ def create_app(paths: Paths, clock: Callable[[], float] = time.time) -> FastAPI:
         """The Card with its Flags and Review, as a Markdown download."""
         conn = db.connect(paths.db)
         try:
-            row = db.review_card(conn, card_id)
+            row = db.card_for_review(conn, card_id)
             if row is None:
                 raise HTTPException(404, f"no card {card_id}")
             md = export.markdown(
-                review.view(paths, row), db.card_flags(conn, card_id), db.card_review(conn, card_id)
+                review.view(paths, row), db.card_flags(conn, card_id), db.get_review(conn, card_id)
             )
         finally:
             conn.close()

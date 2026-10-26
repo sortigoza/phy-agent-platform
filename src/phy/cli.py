@@ -271,7 +271,12 @@ def flags(
     ] = "30d",
 ) -> None:
     """Flags grouped by field and kind, as input for Meta-work."""
-    typer.echo(phy_flags.render(phy_flags.since(resolve_paths(), since), since))
+    try:
+        flagged = phy_flags.since(resolve_paths(), since)
+    except ConfigError as e:
+        log.error("flags.failed", error=str(e))
+        raise typer.Exit(1) from None
+    typer.echo(phy_flags.render(flagged, since))
 
 
 @app.command()

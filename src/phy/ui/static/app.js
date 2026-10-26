@@ -100,9 +100,10 @@ document.addEventListener("click", (e) => {
 
 document.addEventListener("keydown", (e) => {
   const a = document.activeElement;
-  if (a && (a.tagName === "INPUT" && a.type === "text" || a.tagName === "TEXTAREA")) {
-    const form = a.closest(".flagform");
-    if (form && a.value === "" && /^[1-4]$/.test(e.key)) {
+  const form = a?.closest(".flagform");
+  if (form || a && (a.tagName === "INPUT" && a.type === "text" || a.tagName === "TEXTAREA")) {
+    const note = form && $("input[name=note]", form);
+    if (form && note.value === "" && /^[1-4]$/.test(e.key)) {
       $$("input[name=kind]", form)[+e.key - 1].checked = true;
       e.preventDefault();
     } else if (e.key === "Escape") {
