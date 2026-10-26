@@ -5,10 +5,12 @@ the Paper files; never takes `phy.lock`.
 import sqlite3
 import time
 from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, get_args
+from urllib.parse import urlencode
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi import Path as PathParam
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -17,13 +19,16 @@ from fastapi.templating import Jinja2Templates
 from phy import db
 from phy.config import Paths
 from phy.release import release_status
-from phy.ui import export, figures, review
+from phy.ui import export, figures, review, runs
 from phy.ui.help import HELP, REVIEW_KEYS
 
 HERE = Path(__file__).parent
 ARXIV_ID = r"^\d{4}\.\d{4,5}$"
 # A Flag target such as `tldr`, `key_results[0]` or `opinion.limitations_flagged[1]`.
 FIELD_PATH = r"^[a-z_]+(\[\d+\])?(\.[a-z_]+(\[\d+\])?)?$"
+# `/runs?since=`: `7d`, `week`, `2026-10-19` or `2026-10-19T06:00:00+00:00`.
+SINCE = r"^(\d+d|week|\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:\d{2})?)?)$"
+RunStatus = Literal["ok", "failed", "skipped", "aborted"]
 FlagKind = Literal["wrong_value", "quote_doesnt_support", "missing", "should_be_opinion"]
 
 
@@ -140,6 +145,49 @@ def create_app(paths: Paths, clock: Callable[[], float] = time.time) -> FastAPI:
         finally:
             conn.close()
 
+    @app.get("/runs", response_class=HTMLResponse)
+    def runs_page(
+        request: Request,
+        stage: str | None = None,
+        status: RunStatus | None = None,
+        ids: str | None = None,
+        since: Annotated[str | None, Query(pattern=SINCE)] = None,
+    ):
+        """`ids` is a comma-separated list of arXiv ids; `since` is `<n>d` (the last n days),
+        `week` (from Monday 00:00 UTC) or an ISO date or timestamp."""
+        arxiv_ids = [i for i in (ids or "").replace(" ", "").split(",") if i] or None
+        start = _since(since, datetime.fromtimestamp(clock(), UTC)) if since else None
+        conn = db.connect(paths.db)
+        try:
+            rows = db.list_runs(conn, stage=stage, status=status, arxiv_ids=arxiv_ids, since=start)
+        finally:
+            conn.close()
+        others = {k: v for k, v in {"stage": stage, "ids": ids, "since": since}.items() if v}
+        pills = [("all", None)] + [(s, s) for s in get_args(RunStatus)]
+        return page(
+            request,
+            "runs.html",
+            page="runs",
+            runs=[runs.row(r) for r in rows],
+            filters=[f"{k}={v}" for k, v in (others | {"status": status}).items() if v],
+            status=status,
+            pills=[
+                (label, s, "/runs?" + urlencode(others | ({"status": s} if s else {})))
+                for label, s in pills
+            ],
+        )
+
+    @app.get("/runs/{run_id}", response_class=HTMLResponse)
+    def run_page(request: Request, run_id: str):
+        conn = db.connect(paths.db)
+        try:
+            run = db.get_run(conn, run_id)
+        finally:
+            conn.close()
+        if run is None:
+            raise HTTPException(404, f"no run {run_id}")
+        return page(request, "run.html", page="runs", run=runs.view(paths.home, run))
+
     @app.get("/cards/{card_id}/export.md")
     def export_card(card_id: int):
         """The Card with its Flags and Review, as a Markdown download."""
@@ -180,3 +228,19 @@ def _by_path(flags: list) -> dict[str, list]:
     for f in flags:
         out.setdefault(f["field_path"], []).append(f)
     return out
+
+
+def _since(value: str, now: datetime) -> str:
+    """The start of a `/runs?since=` window, as an ISO timestamp comparable with `started_at`."""
+    if value == "week":
+        monday = now.date() - timedelta(days=now.weekday())
+        return datetime(monday.year, monday.month, monday.day, tzinfo=UTC).isoformat()
+    if value.endswith("d"):
+        return (now - timedelta(days=int(value[:-1]))).isoformat(timespec="seconds")
+    try:
+        start = datetime.fromisoformat(value)
+    except ValueError:
+        raise HTTPException(422, f"since: not a date: {value}") from None
+    if len(value) == len("2026-10-19"):
+        return value
+    return (start if start.tzinfo else start.replace(tzinfo=UTC)).astimezone(UTC).isoformat()

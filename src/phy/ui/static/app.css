@@ -103,3 +103,20 @@ kbd { font: 11px ui-monospace, monospace; padding: 0 4px; border: 1px solid var(
 .flagform { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin-top: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--soft); font-size: 13px; }
 .flagform[hidden] { display: none; }
 .flagform input[type=text] { flex: 1 1 200px; padding: 3px 6px; }
+
+/* /runs and the run viewer */
+.doc.wide { max-width: 1200px; }
+table.runs { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.runs th { text-align: left; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); padding: 6px 8px; white-space: nowrap; }
+table.runs td { padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.runs .num { text-align: right; font-variant-numeric: tabular-nums; }
+.badge.st-ok { color: var(--ok); }
+.badge.st-failed { background: var(--uns); color: var(--uns-b); font-weight: 600; }
+.badge.st-skipped { background: var(--soft); color: var(--muted); border: 1px solid var(--line); }
+.badge.st-aborted { background: var(--amber-bg); color: var(--amber-ink); font-weight: 600; }
+.runerror { color: var(--uns-b); background: var(--uns); padding: 6px 10px; border-radius: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.call h3 { font-size: 14px; margin: 24px 0 0; }
+.call .meta { font-size: 13px; color: var(--muted); margin: 2px 0 6px; }
+.call pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; background: var(--soft); padding: 6px 10px; margin: 4px 0; max-height: 480px; overflow-y: auto; }
+.call details summary { font-size: 13px; color: var(--muted); cursor: pointer; }
+.call .role { font-size: 12px; color: var(--muted); }

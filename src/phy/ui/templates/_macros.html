@@ -34,3 +34,5 @@
   <span class="rendered">{{ f.value_html|safe }}</span>
   {% endif %}
 {% endmacro %}
+
+{% macro status_badge(status) %}<span class="badge st-{{ status }}" title="{{ help['st_' ~ status] }}">{{ status }}</span>{% endmacro %}

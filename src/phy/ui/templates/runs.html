@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Runs{% endblock %}
+
+{% block subject %}<span title="{{ help.runfilter }}">{{ filters|join(' · ') if filters else 'all runs' }}</span>{% endblock %}
+
+{% block badges %}<span class="badge" title="{{ help.runcount }}">{{ runs|length }} run{{ 's' if runs|length != 1 }}</span>{% endblock %}
+
+{% block subbar %}
+<nav class="secnav" title="{{ help.statuspills }}">
+  {% for label, s, href in pills %}<a href="{{ href }}"{% if s == status %} class="on"{% endif %}>{{ label }}</a>{% endfor %}
+</nav>
+{% endblock %}
+
+{% block body %}
+<main class="doc wide">
+{% if not runs %}
+  <p class="empty">No runs match{% if filters %} {{ filters|join(', ') }}{% endif %}.</p>
+{% else %}
+<table class="runs">
+  <thead><tr>
+    <th title="{{ help.stage }}">Stage</th>
+    <th title="{{ help.paper }}">Paper</th>
+    <th title="{{ help.runstatus }}">Status</th>
+    <th title="{{ help.model }}">Model</th>
+    <th title="{{ help.prompt }}">Prompt</th>
+    <th class="num" title="{{ help.tokens }}">Tokens in / out</th>
+    <th class="num" title="{{ help.cost }}">Cost</th>
+    <th class="num" title="{{ help.duration }}">Duration</th>
+    <th title="{{ help.started }}">Started</th>
+  </tr></thead>
+  <tbody>
+  {% for r in runs %}
+  <tr data-run="{{ r.id }}">
+    <td><a href="/runs/{{ r.id }}" title="{{ help.openrun }}">{{ r.stage }}</a></td>
+    <td>{% if r.paper %}<a href="/runs?ids={{ r.paper }}" title="{{ help.paperruns }}">{{ r.paper }}</a>{% endif %}</td>
+    <td>{{ m.status_badge(r.status) }}</td>
+    <td>{{ r.model }}</td>
+    <td>{{ r.prompt }}</td>
+    <td class="num">{{ r.tokens }}</td>
+    <td class="num">{{ r.cost }}</td>
+    <td class="num">{{ r.duration }}</td>
+    <td>{{ r.started }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+</main>
+{% endblock %}

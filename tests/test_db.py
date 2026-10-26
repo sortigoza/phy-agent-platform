@@ -77,3 +77,18 @@ def test_two_migrations_with_one_number_are_refused(tmp_path):
     (migrations / f"{nxt:03d}_b.sql").write_text("CREATE TABLE b (id INTEGER);")
     with pytest.raises(RuntimeError, match="share a number"):
         db.connect(tmp_path / "phy.db", migrations)
+
+
+def test_run_lookups_by_time_and_by_stage_and_paper_use_an_index(tmp_path):
+    conn = db.connect(tmp_path / "phy.db")
+
+    def plan(sql: str) -> str:
+        return " ".join(r["detail"] for r in conn.execute("EXPLAIN QUERY PLAN " + sql))
+
+    assert "USING INDEX" in plan("SELECT * FROM runs WHERE started_at >= '2026-10-19'")
+    # the unretried-failure check: a later ok run of the same Stage and paper
+    retried = plan(
+        "SELECT 1 FROM runs WHERE stage = 'read' AND arxiv_id IS '1904.12072'"
+        " AND status = 'ok' AND started_at > '2026-10-19'"
+    )
+    assert "(stage=? AND arxiv_id=? AND started_at>?)" in retried

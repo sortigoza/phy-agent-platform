@@ -1,7 +1,7 @@
 # /runs and the run viewer
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 03, 06
 
 ## Goal

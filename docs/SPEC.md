@@ -368,7 +368,7 @@ Shows the Instrument tiles and the weekly funnel, with the page conventions (top
 - **Tile:** the name, the value, a sparkline of the last 7 days (one bar per day, weekends grey; Golden tiles show the last 7 eval runs instead), a note on what the value covers, the red rule and a "runs →" link. A tile is green, red, or grey when there is nothing to compute yet; grey says why ("no Reviews yet", "no Golden eval run yet", "baseline forming"). "Every M0 Instrument tile populated" means every tile has left grey.
 - **Links:** "runs →" opens the run list, `/runs` filtered by query string (`stage`, `status`, `ids`, `since`). Golden tiles link to `/eval/<id>`, and the invented-numbers tile to the Card.
 - **Windows:** the last 7 days, except Filter precision (14 days) and weekly spend (the ISO week from Monday 00:00 UTC, the window the guardrail enforces, shown with last week's total). Announcement days are Mon–Fri; arXiv holidays are ignored.
-- **Queries:** every tile is one SQL query over the §6 tables, with no extra columns. Screenings and Cards are dated by their `run_id`'s `runs.started_at`. The unsupported rate divides by the fields that carry a Support, counted with `json_tree(card_json)`. The mark's date is the day it last advanced, since it moves to the run's `responseDate`. `runs.status` is `ok` or `failed`.
+- **Queries:** every tile is one SQL query over the §6 tables, with no extra columns. Screenings and Cards are dated by their `run_id`'s `runs.started_at`. The unsupported rate divides by the fields that carry a Support, counted with `json_tree(card_json)`. The mark's date is the day it last advanced, since it moves to the run's `responseDate`. `runs.status` is `ok`, `failed`, `skipped` (a Paper too long to Read) or `aborted` (the API account is blocked); `skipped` and `aborted` runs make no model call.
 
 | Instrument | Question | Source | Red when | Action |
 | --- | --- | --- | --- | --- |
@@ -393,7 +393,11 @@ Shows the Instrument tiles and the weekly funnel, with the page conventions (top
 
 ### `/runs` and `/runs/<id>`
 
-`/runs` lists runs, newest first, filtered by the query string the tiles link with. The run viewer renders one run's JSONL log: request (prompt version, model, and the prompt with the paper text collapsed), response, parsed output, validation errors, tokens, cache hits, and cost. This covers "why did it fail?" until Langfuse arrives.
+`/runs` lists runs, newest first, filtered by the query string the tiles link with, with the page conventions:
+- **Filters:** `stage`; `status` (`ok`, `failed`, `skipped`, `aborted`, also as section pills that keep the rest of the filter); `ids`, comma-separated arXiv ids; `since`, as `7d` (the last 7 × 24 h), `week` (from Monday 00:00 UTC) or an ISO date or timestamp. They combine.
+- **Columns:** Stage, Paper, status badge, model, prompt version, tokens in (uncached, cache reads and writes together) / out, cost, duration and start time. The Stage opens the run viewer; the Paper lists every run on it.
+
+The run viewer, `/runs/<id>`, renders one run's JSONL log, call by call: request (prompt version, model, and the prompt with the paper text collapsed), response, parsed output, validation errors, tokens, cache hits, and cost. A `skipped` or `aborted` run made no call, so it shows only its `error` line; a missing JSONL file is said, not raised. This covers "why did it fail?" until Langfuse arrives.
 
 **Alerts in M0** are red tiles only. M1 adds macOS notifications through `osascript` and a missed-papers log form.
 

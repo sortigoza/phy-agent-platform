@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Run · {{ run.row.stage }}{% if run.row.paper %} · {{ run.row.paper }}{% endif %}{% endblock %}
+
+{% block subject %}
+  <a href="/runs?stage={{ run.row.stage }}" title="{{ help.stage }}">{{ run.row.stage }}</a>
+  {% if run.row.paper %}<a href="/runs?ids={{ run.row.paper }}" title="{{ help.paperruns }}">{{ run.row.paper }}</a>{% endif %}
+  <span class="title" title="{{ help.started }}">{{ run.row.started }}</span>
+  <span class="title" title="{{ help.runid }}">{{ run.row.id }}</span>
+{% endblock %}
+
+{% block badges %}
+  {{ m.status_badge(run.row.status) }}
+  {% if run.row.model %}<span class="badge" title="{{ help.model }}">{{ run.row.model }}</span>{% endif %}
+  {% if run.row.prompt %}<span class="badge" title="{{ help.prompt }}">prompt {{ run.row.prompt }}</span>{% endif %}
+  {% if run.row.tokens %}<span class="badge" title="{{ help.tokens }}">{{ run.row.tokens }} tokens</span>{% endif %}
+  {% if not run.no_call %}<span class="badge" title="{{ help.cost }}">{{ run.total_cost }}</span>{% endif %}
+  {% if run.row.duration %}<span class="badge" title="{{ help.duration }}">{{ run.row.duration }}</span>{% endif %}
+{% endblock %}
+
+{% block subbar %}{% if run.calls %}
+<nav class="secnav" title="{{ help.secnav }}">
+  {% for c in run.calls %}{% set n = loop.index %}
+    {% for key, name in [('request', 'Request'), ('response', 'Response'), ('output', 'Parsed output'), ('errors', 'Errors'), ('usage', 'Tokens and cost')] %}<a href="#call-{{ n }}-{{ key }}">{% if run.calls|length > 1 %}{{ n }}: {% endif %}{{ name }}</a>{% endfor %}
+  {% endfor %}
+</nav>
+{% endif %}{% endblock %}
+
+{% block body %}
+<main class="doc">
+{% if run.error %}<p class="runerror" title="{{ help.runerror }}">{{ run.error }}</p>{% endif %}
+{% if run.no_call %}
+  <p class="empty" title="{{ help.nocall }}">No model call{% if run.row.status in ('skipped', 'aborted') %}: the run was {{ run.row.status }}{% endif %}.</p>
+{% elif run.missing_log %}
+  <p class="empty" title="{{ help.missinglog }}">The log file {{ run.log_path }} is missing, so what the run sent and got back can't be shown.</p>
+{% else %}
+  {% for c in run.calls %}{% set n = loop.index %}
+  <article class="call">
+    {% if run.calls|length > 1 %}<h3>Call {{ n }} of {{ run.calls|length }} · {{ c.at }}</h3>{% endif %}
+    <section id="call-{{ n }}-request" data-section="request">
+      <h2>Request</h2>
+      <p class="meta"><span title="{{ help.model }}">{{ c.model }}</span> · <span title="{{ help.prompt }}">prompt {{ run.row.prompt or '—' }}</span> · <span title="{{ help.settings }}">{{ c.settings }}</span></p>
+      {% for b in c.blocks %}
+        {% if b.paper %}
+        <details class="paper"><summary title="{{ help.papertext }}">{{ b.role }}: paper text ({{ '{:,}'.format(b.text|length) }} characters)</summary><pre>{{ b.text }}</pre></details>
+        {% elif b.role == 'system' %}
+        <details class="prompt"><summary title="{{ help.systemprompt }}">system prompt ({{ '{:,}'.format(b.text|length) }} characters)</summary><pre>{{ b.text }}</pre></details>
+        {% else %}
+        <div class="prompt"><div class="role">{{ b.role }}</div><pre>{{ b.text }}</pre></div>
+        {% endif %}
+      {% endfor %}
+      {% if c.schema %}<details class="prompt"><summary title="{{ help.schema }}">output schema</summary><pre>{{ c.schema }}</pre></details>{% endif %}
+    </section>
+    <section id="call-{{ n }}-response" data-section="response">
+      <h2>Response</h2>
+      {% if c.response %}
+        <p class="meta"><span title="{{ help.stopreason }}">stop reason {{ c.stop_reason }}</span>{% if c.duration_ms is not none %} · <span title="{{ help.callduration }}">{{ '{:,}'.format(c.duration_ms) }} ms</span>{% endif %}</p>
+        <details class="prompt"><summary title="{{ help.rawresponse }}">raw response</summary><pre>{{ c.response }}</pre></details>
+      {% else %}
+        <p class="empty" title="{{ help.noresponse }}">No response: the call did not get one.</p>
+      {% endif %}
+    </section>
+    <section id="call-{{ n }}-output" data-section="output">
+      <h2>Parsed output</h2>
+      {% if c.output %}<pre>{{ c.output }}</pre>
+      {% elif c.output_error %}<p class="runerror" title="{{ help.outputerror }}">The output is {{ c.output_error }}</p>
+      {% else %}<p class="empty">None.</p>{% endif %}
+    </section>
+    <section id="call-{{ n }}-errors" data-section="errors">
+      <h2>Errors</h2>
+      {% if c.error %}<p class="runerror" title="{{ help.callerror }}">{{ c.error }}</p>
+      {% else %}<p class="empty" title="{{ help.callerror }}">No validation errors.</p>{% endif %}
+    </section>
+    <section id="call-{{ n }}-usage" data-section="usage">
+      <h2>Tokens and cost</h2>
+      <p class="meta" title="{{ help.usage }}">{% for k, v in c.usage.items() %}{{ k }} {{ '{:,}'.format(v) }} · {% endfor %}${{ '%.4f'|format(c.cost_usd) }}</p>
+    </section>
+  </article>
+  {% endfor %}
+{% endif %}
+</main>
+{% endblock %}
