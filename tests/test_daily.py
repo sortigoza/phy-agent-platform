@@ -3,6 +3,7 @@
 import json
 import re
 import sqlite3
+from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from phy import daily
 from phy.cli import app
 from phy.config import resolve_paths
 from phy.locks import phy_lock
+from phy.release import ReleaseStatus
 
 FIXTURES = Path(__file__).parent / "fixtures"
 OAI_URL = "https://oaipmh.arxiv.org/oai"
@@ -201,3 +203,21 @@ def test_a_bug_in_a_stage_runs_the_later_stages_then_fails_the_command(installed
     [error] = [e for e in events(installed) if e["level"] == "error"]
     assert error["event"] == "daily.stage_failed"
     assert "Traceback" in error["exception"]
+
+
+def test_daily_logs_a_pending_release_and_records_when_it_ran(installed, api, monkeypatch):
+    pending = ReleaseStatus("v0.1.0", "v0.2.0", ["Fix Verify", "Add /review"])
+    monkeypatch.setattr(daily, "release_status", lambda paths: pending)
+
+    assert phy("daily").exit_code == 0
+
+    [update] = [e for e in events(installed) if e["event"] == "schedule.update_available"]
+    assert update["level"] == "info"
+    assert (update["installed"], update["release"], update["commits"]) == ("v0.1.0", "v0.2.0", 2)
+    [state] = rows(installed, "SELECT value FROM state WHERE key = 'daily.last_run_at'")
+    assert state["value"].startswith(datetime.now(UTC).date().isoformat())
+
+
+def test_daily_logs_nothing_about_releases_when_none_is_pending(installed, api):
+    assert phy("daily").exit_code == 0
+    assert "schedule.update_available" not in {e["event"] for e in events(installed)}

@@ -121,6 +121,11 @@ class Paths:
     def logs(self) -> Path:
         return self.home / "logs"
 
+    @property
+    def launchd_err(self) -> Path:
+        """stderr of the scheduled job: crashes before logging starts."""
+        return self.logs / "launchd.err"
+
     def log_file(self, day: date) -> Path:
         return self.logs / f"phy-{day.isoformat()}.jsonl"
 

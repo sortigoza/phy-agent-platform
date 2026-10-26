@@ -73,13 +73,14 @@ The schedule runs a **Release**, a tagged version, from its own checkout at `$PH
 ```sh
 git tag -a v0.1.0 -m "First release"  # on main; phy never tags
 uv run phy schedule install          # checks out the newest Release in $PHY_HOME/app, writes + loads ~/Library/LaunchAgents/phy.daily.plist
-uv run phy schedule status
+uv run phy schedule status          # loaded or not, the installed Release, the last run and its exit code
 ```
 
 When you tag a newer Release, the UI top bar shows "update available", and so does `phy status`. Install it when you choose:
 
 ```sh
 uv run phy schedule update           # refuses a downgrade; does nothing while a run holds the lock
+uv run phy schedule uninstall        # unloads the job, removes the plist and $PHY_HOME/app; data stays
 ```
 
 The job runs at 06:00 and at login.

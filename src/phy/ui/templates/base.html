@@ -23,7 +23,7 @@
   </nav>
   <div class="subject">{% block subject %}{% endblock %}</div>
   <div class="badges">
-    {% if release.newest and release.newest != release.installed %}
+    {% if release.update_available %}
     <span class="badge release" title="{{ help.release }} Commits: {{ release.commits|join('; ') }}">update available: {{ release.newest }} ({{ release.commits|length }} commit{{ 's' if release.commits|length != 1 }})</span>
     {% endif %}
     {% block badges %}{% endblock %}

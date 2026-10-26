@@ -15,6 +15,8 @@ from phy import flags as phy_flags
 from phy import init as phy_init
 from phy import llm
 from phy import log as phy_log
+from phy import release as phy_release
+from phy import schedule as phy_schedule
 from phy import status as phy_status
 from phy import verify as verify_stage
 from phy import watch as watch_stage
@@ -23,6 +25,7 @@ from phy.config import SCHEMAS, ConfigError, load_config, resolve_paths
 from phy.ctx import Ctx
 from phy.locks import phy_lock
 from phy.read import stage as read_stage
+from phy.release import ReleaseError
 
 log = structlog.get_logger()
 
@@ -31,6 +34,10 @@ ARXIV_ID = re.compile(r"\d{4}\.\d{4,5}")
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Physics Agent Platform.")
 schema_app = typer.Typer(no_args_is_help=True, help="The Card JSON Schemas.")
 app.add_typer(schema_app, name="schema")
+schedule_app = typer.Typer(
+    no_args_is_help=True, help="The launchd job that runs `phy daily` from the installed Release."
+)
+app.add_typer(schedule_app, name="schedule")
 
 
 def _print_version(value: bool) -> None:
@@ -303,3 +310,55 @@ def schema_export(
     """Write the CardDraft and Card JSON Schemas (commit them, so schema changes show in diffs)."""
     for path in export_schemas(directory):
         typer.echo(str(path))
+
+
+@schedule_app.command("install")
+def schedule_install() -> None:
+    """Check out the newest Release at $PHY_HOME/app and load the 06:00 launchd job."""
+    try:
+        tag = phy_schedule.install(resolve_paths())
+    except ReleaseError as e:
+        log.error("schedule.install_failed", error=str(e))
+        raise typer.Exit(1) from None
+    typer.echo(f"installed {tag}; {phy_schedule.LABEL} runs at 06:00 and at login")
+
+
+@schedule_app.command("status")
+def schedule_status() -> None:
+    """Whether the job is loaded, the installed Release, and the last run."""
+    try:
+        s = phy_schedule.status(resolve_paths())
+    except ReleaseError as e:
+        log.error("schedule.status_failed", error=str(e))
+        raise typer.Exit(1) from None
+    typer.echo(phy_schedule.render(s))
+
+
+@schedule_app.command("update")
+def schedule_update() -> None:
+    """Install the newest Release, once no run holds phy.lock. Refuses a downgrade."""
+    paths = resolve_paths()
+    with phy_lock(paths):
+        try:
+            updated = phy_schedule.update(paths)
+        except ReleaseError as e:
+            log.error("schedule.update_failed", error=str(e))
+            raise typer.Exit(1) from None
+    if updated is None:
+        typer.echo(f"already on the newest Release, {phy_release.installed(paths)}")
+        return
+    n = len(updated.commits)
+    typer.echo(f"updated {updated.previous} -> {updated.installed} ({n} commit{'s' * (n != 1)}):")
+    for subject in updated.commits:
+        typer.echo(f"  {subject}")
+
+
+@schedule_app.command("uninstall")
+def schedule_uninstall() -> None:
+    """Unload the job; remove its plist and $PHY_HOME/app. Data and config stay."""
+    try:
+        phy_schedule.uninstall(resolve_paths())
+    except ReleaseError as e:
+        log.error("schedule.uninstall_failed", error=str(e))
+        raise typer.Exit(1) from None
+    typer.echo("uninstalled")

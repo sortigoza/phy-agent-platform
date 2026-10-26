@@ -89,7 +89,7 @@ def render(s: Status) -> str:
 def _release(r: ReleaseStatus) -> str:
     if r.installed is None:
         return "release: none installed"
-    if r.newest and r.newest != r.installed:
+    if r.update_available:
         return (
             f"release: {r.installed}; update available: {r.newest} ({len(r.commits)} commits),"
             " run `phy schedule update`"
