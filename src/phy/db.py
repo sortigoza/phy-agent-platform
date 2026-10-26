@@ -419,12 +419,12 @@ REVIEW_CARD = (
 )
 
 
-def review_card(conn: sqlite3.Connection, card_id: int) -> sqlite3.Row | None:
+def card_for_review(conn: sqlite3.Connection, card_id: int) -> sqlite3.Row | None:
     """One Card as `review_queue` returns it, whatever its status."""
     return conn.execute(REVIEW_CARD + " WHERE c.id = ?", (card_id,)).fetchone()
 
 
-def card_review(conn: sqlite3.Connection, card_id: int) -> sqlite3.Row | None:
+def get_review(conn: sqlite3.Connection, card_id: int) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM reviews WHERE card_id = ?", (card_id,)).fetchone()
 
 
@@ -453,7 +453,7 @@ def write_review(
     Read's selection can re-card it. A Card has at most one Review: returns False, writing
     nothing, if it has one already."""
     with conn:
-        if card_review(conn, card_id):
+        if get_review(conn, card_id):
             return False
         conn.execute(
             "INSERT INTO reviews (card_id, relevance, deep_read, seconds_spent, note, created_at)"

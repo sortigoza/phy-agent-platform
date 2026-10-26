@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from importlib.resources import files
 
 import pytest
 from typer.testing import CliRunner
@@ -16,6 +17,8 @@ def ago(**delta):
 @pytest.fixture
 def seeded(phy_home):
     phy_home.mkdir()
+    for name in ["config.toml", "questions.yaml"]:
+        (phy_home / name).write_bytes((files("phy") / "defaults" / name).read_bytes())
     conn = db.connect(phy_home / "phy.db")
     with conn:
         conn.execute(
@@ -73,6 +76,17 @@ def test_flags_are_grouped_by_field_and_kind(seeded):
 def test_a_longer_window_reaches_older_flags(seeded):
     result = CliRunner().invoke(app, ["flags", "--since", "60d"])
     assert "method: 1" in result.output and "too old" in result.output
+
+
+def test_the_window_is_30_days_by_default(seeded):
+    result = CliRunner().invoke(app, ["flags"])
+    assert result.exit_code == 0, result.output
+    assert result.output.startswith("last 30 days: 4 Flags")
+
+
+def test_invalid_config_fails_the_command(seeded, phy_home):
+    (phy_home / "config.toml").write_text("nonsense = 1\n")
+    assert CliRunner().invoke(app, ["flags"]).exit_code == 1
 
 
 def test_since_takes_days(seeded):
